@@ -1,0 +1,134 @@
+import MainLayout from '../components/layout/MainLayout';
+import { User, Trophy, TrendingUp, Award } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+
+const badges = [
+  { id: 1, name: 'FCR 마스터', color: '#FBBC04' },
+  { id: 2, name: '스피드 레이서', color: '#0047AB' },
+  { id: 3, name: '감정 케어', color: '#34A853' },
+  { id: 4, name: '완벽주의자', color: '#9C27B0' },
+  { id: 5, name: '시뮬 마니아', color: '#FF6B35' },
+];
+
+const monthlyStats = [
+  { label: '상담 완료', value: '127건', comparison: '팀 평균 대비 +15%', status: 'good' },
+  { label: 'FCR', value: '94%', comparison: '목표: 90%', status: 'good' },
+  { label: '평균 통화', value: '4분 32초', comparison: '팀 평균: 5분 10초', status: 'good' },
+  { label: '후처리 시간', value: '2분 15초', comparison: '목표: 3분', status: 'good' },
+  { label: '감정 전환율', value: '82%', comparison: '목표: 75%', status: 'good' },
+];
+
+export default function ProfilePage() {
+  const employeeName = localStorage.getItem('employeeName') || '홍길동';
+  const employeeId = localStorage.getItem('employeeId') || 'EMP-001';
+  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+
+  return (
+    <MainLayout>
+      <div className="h-[calc(100vh-60px)] overflow-y-auto p-2 sm:p-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-4">
+            {/* Profile Card */}
+            <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 sm:p-4">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#0047AB] rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-base sm:text-lg font-bold text-[#333333] mb-2">{employeeName}</h1>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-[#666666]">
+                    <div><span className="font-medium text-[#333333]">사번:</span> {employeeId}</div>
+                    <div><span className="font-medium text-[#333333]">소속:</span> {isAdmin ? '관리부' : '상담1팀'}</div>
+                    <div><span className="font-medium text-[#333333]">직급:</span> {isAdmin ? '팀장' : '대리'}</div>
+                    <div><span className="font-medium text-[#333333]">권한 부여일:</span> 2024-01-15</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Badges */}
+              <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-[#E0E0E0]">
+                <h3 className="text-xs font-semibold text-[#333333] mb-2 flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5 text-[#0047AB]" />
+                  획득 배지
+                </h3>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  {badges.map((badge) => (
+                    <div 
+                      key={badge.id}
+                      className="p-2 bg-[#F8F9FA] border-2 rounded-lg text-center hover:scale-105 transition-transform cursor-pointer"
+                      style={{ borderColor: badge.color }}
+                    >
+                      <div className="text-[10px] font-medium line-clamp-1" style={{ color: badge.color }}>
+                        {badge.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Center Ranking */}
+            <div className="bg-gradient-to-br from-[#FFF9E6] to-[#FFFBF0] rounded-lg shadow-sm border border-[#FBBC04]/30 p-4 flex flex-col items-center justify-center">
+              <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-[#FBBC04] mb-3" />
+              <div className="text-center">
+                <div className="text-xs text-[#666666] mb-0.5">센터 랭킹</div>
+                <div className="text-2xl sm:text-3xl font-bold text-[#0047AB] mb-0.5">3위</div>
+                <div className="text-xs text-[#999999]">전체 45명</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+            {/* Monthly Statistics */}
+            <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 sm:p-4">
+              <h2 className="text-sm font-bold text-[#333333] mb-3 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-[#0047AB]" />
+                1월 성과
+              </h2>
+              <div className="space-y-2">
+                {monthlyStats.map((stat, index) => (
+                  <div key={index} className="flex items-center justify-between py-1.5 border-b border-[#F0F0F0] last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[#666666]">{stat.label}</span>
+                      <span className="text-xs font-semibold text-[#333333]">{stat.value}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-[#999999] hidden sm:inline">{stat.comparison}</span>
+                      {stat.status === 'good' && (
+                        <div className="w-5 h-5 bg-[#34A853] rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs">✓</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Personal Info Edit */}
+            <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 sm:p-4">
+              <h2 className="text-sm sm:text-base font-bold text-[#333333] mb-3 sm:mb-4">개인정보 수정</h2>
+              <div className="space-y-3 sm:space-y-4">
+                <div>
+                  <Label htmlFor="phone" className="text-xs sm:text-sm text-[#666666]">연락처</Label>
+                  <Input id="phone" type="tel" defaultValue="010-1234-5678" className="mt-1 h-9 sm:h-10 text-sm" />
+                </div>
+                <div>
+                  <Label htmlFor="email" className="text-xs sm:text-sm text-[#666666]">이메일</Label>
+                  <Input id="email" type="email" defaultValue="hong@example.com" className="mt-1 h-9 sm:h-10 text-sm" />
+                </div>
+                <div className="pt-2">
+                  <Button variant="outline" className="w-full mb-2 h-9 sm:h-10 text-xs sm:text-sm">비밀번호 변경</Button>
+                  <Button className="w-full bg-[#0047AB] hover:bg-[#003580] h-9 sm:h-10 text-xs sm:text-sm">저장</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </MainLayout>
+  );
+}
