@@ -1,5 +1,5 @@
 import MainLayout from '../components/layout/MainLayout';
-import { CheckCircle, Clock, XCircle, AlertCircle, ExternalLink, Star, TrendingUp, TrendingDown, Minus, Target, Users, BookOpen, Award, PlayCircle } from 'lucide-react';
+import { CheckCircle, Clock, XCircle, AlertCircle, ExternalLink, Star, TrendingUp, TrendingDown, Minus, Target, Users, BookOpen, Shield, Play } from 'lucide-react';
 import ConsultationDetailModal from '../components/modals/ConsultationDetailModal';
 import AnnouncementModal from '../components/modals/AnnouncementModal';
 import { useState, useEffect } from 'react';
@@ -113,8 +113,8 @@ export default function DashboardPage() {
         <div className="w-full max-w-[1920px] h-full grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 overflow-hidden">
           {/* 좌측 영역 (50%) - 내부 스크롤 */}
           <div className="flex flex-col gap-3 sm:gap-4 overflow-y-auto overflow-x-hidden">
-            {/* KPI 카운팅 4개 (1x4 그리드) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 flex-shrink-0">
+            {/* KPI 카운팅 4개 (모바일 4x1, 태블릿+ 1x4) */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-3 flex-shrink-0">
               <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 flex items-center justify-between">
                 <div>
                   <div className="text-[11px] text-[#666666] mb-1">총 상담</div>
@@ -313,78 +313,66 @@ export default function DashboardPage() {
             <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 sm:p-4 flex-shrink-0">
               <h2 className="text-sm sm:text-base font-bold text-[#333333] mb-3 flex items-center gap-2">
                 <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-[#0047AB]" />
-                교육 시뮬레이션
+                추천 교육 시뮬레이션
               </h2>
               
               <div className="grid grid-cols-2 gap-3">
-                {/* 1열: 진행 현황 */}
-                <div>
-                  <div className="text-[11px] text-[#666666] mb-2 font-semibold">진행 현황</div>
-                  <div className="space-y-2">
-                    {simulationsData.filter(s => s.status === 'completed' || s.status === 'in-progress').map((sim) => (
-                      <div 
-                        key={sim.id}
-                        className="p-2.5 rounded-lg bg-[#F8F9FA] border border-[#E0E0E0] hover:bg-[#E8F1FC] hover:border-[#0047AB] cursor-pointer transition-all"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                            {sim.status === 'completed' && <Award className="w-3.5 h-3.5 text-[#34A853] flex-shrink-0" />}
-                            {sim.status === 'in-progress' && <PlayCircle className="w-3.5 h-3.5 text-[#0047AB] flex-shrink-0" />}
-                            <span className="text-xs sm:text-sm font-medium text-[#333333] line-clamp-1">{sim.title}</span>
-                          </div>
-                          <span className={`text-[11px] px-2 py-0.5 rounded font-medium flex-shrink-0 ${
-                            sim.status === 'completed' ? 'bg-[#E8F5E9] text-[#34A853]' : 'bg-[#E8F1FC] text-[#0047AB]'
-                          }`}>
-                            {sim.status === 'completed' ? `${sim.score}점` : `${sim.progress}%`}
-                          </span>
+                {simulationsData.map((sim) => {
+                  const iconMap: { [key: string]: any } = {
+                    'Target': Target,
+                    'Shield': Shield,
+                    'Users': Users,
+                    'TrendingUp': TrendingUp
+                  };
+                  const IconComponent = iconMap[sim.icon];
+                  
+                  return (
+                    <div 
+                      key={sim.id}
+                      className="p-3 rounded-lg border-2 border-[#E0E0E0] hover:border-[#0047AB] hover:shadow-md cursor-pointer transition-all"
+                    >
+                      <div className="flex items-start gap-2 mb-2">
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: `${sim.color}15` }}
+                        >
+                          <IconComponent className="w-4 h-4" style={{ color: sim.color }} />
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] text-[#999999]">
-                          <span className={`px-1.5 py-0.5 rounded ${
-                            sim.difficulty === 'easy' ? 'bg-[#E8F5E9] text-[#34A853]' :
-                            sim.difficulty === 'medium' ? 'bg-[#FFF9E6] text-[#FBBC04]' :
-                            'bg-[#FFEBEE] text-[#EA4335]'
-                          }`}>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] font-bold mb-0.5" style={{ color: sim.color }}>
                             {sim.category}
-                          </span>
-                          <span>• {sim.duration}</span>
+                          </div>
+                          <h3 className="text-xs font-bold text-[#333333] leading-tight line-clamp-2">
+                            {sim.title}
+                          </h3>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2열: 추천 시뮬레이션 */}
-                <div>
-                  <div className="text-[11px] text-[#666666] mb-2 font-semibold">추천 시뮬레이션</div>
-                  <div className="space-y-2">
-                    {simulationsData.filter(s => s.status === 'recommended').slice(0, 3).map((sim) => (
-                      <div 
-                        key={sim.id}
-                        className="p-2.5 rounded-lg bg-gradient-to-r from-[#FFF9E6] to-[#FFFBF0] border border-[#FBBC04] hover:shadow-md cursor-pointer transition-all"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                            <Star className="w-3.5 h-3.5 text-[#FBBC04] flex-shrink-0" />
-                            <span className="text-xs sm:text-sm font-medium text-[#333333] line-clamp-1">{sim.title}</span>
-                          </div>
-                          <span className="text-[11px] px-2 py-0.5 rounded bg-white text-[#FBBC04] font-medium flex-shrink-0">
-                            추천
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[11px] text-[#999999]">
-                          <span className={`px-1.5 py-0.5 rounded ${
-                            sim.difficulty === 'easy' ? 'bg-[#E8F5E9] text-[#34A853]' :
-                            sim.difficulty === 'medium' ? 'bg-[#FFF9E6] text-[#FBBC04]' :
+                      
+                      <div className="flex items-center justify-between pt-2 border-t border-[#E0E0E0]">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+                            sim.difficulty === '초급' ? 'bg-[#E8F5E9] text-[#34A853]' :
+                            sim.difficulty === '중급' ? 'bg-[#FFF9E6] text-[#FBBC04]' :
                             'bg-[#FFEBEE] text-[#EA4335]'
                           }`}>
-                            {sim.category}
+                            {sim.difficulty}
                           </span>
-                          <span>• {sim.duration}</span>
+                          <span className="flex items-center gap-0.5 text-[10px] text-[#666666]">
+                            <Clock className="w-3 h-3" />
+                            {sim.duration}
+                          </span>
                         </div>
+                        <button 
+                          className="px-2 py-1 rounded text-[10px] font-semibold text-white flex items-center gap-1"
+                          style={{ backgroundColor: sim.color }}
+                        >
+                          <Play className="w-2.5 h-2.5" />
+                          시작
+                        </button>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

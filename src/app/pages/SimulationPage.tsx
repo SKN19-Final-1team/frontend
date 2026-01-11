@@ -80,45 +80,45 @@ const recentAttempts = [
 export default function SimulationPage() {
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-60px)] flex flex-col p-4 gap-4">
+      <div className="h-[calc(100vh-60px)] flex flex-col p-3 sm:p-4 gap-3 sm:gap-4 overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#0047AB] to-[#4A90E2] rounded-lg shadow-sm p-4 text-white border border-[#0047AB] flex-shrink-0">
-          <h1 className="text-lg font-bold mb-1">교육 시뮬레이션</h1>
+        <div className="bg-gradient-to-r from-[#0047AB] to-[#4A90E2] rounded-lg shadow-sm p-3 sm:p-4 text-white border border-[#0047AB] flex-shrink-0">
+          <h1 className="text-base sm:text-lg font-bold mb-1">교육 시뮬레이션</h1>
           <p className="text-xs opacity-90">실전과 같은 상담 시뮬레이션으로 스킬을 향상시키세요</p>
           
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-3 mt-4">
-            <div className="bg-white/10 rounded-lg p-3 text-center backdrop-blur-sm">
-              <div className="text-xl font-bold">{scenarios.filter(s => s.completed).length}</div>
-              <div className="text-[11px] opacity-80 mt-0.5">완료한 시나리오</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-3 sm:mt-4">
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center backdrop-blur-sm">
+              <div className="text-lg sm:text-xl font-bold">{scenarios.filter(s => s.completed).length}</div>
+              <div className="text-[10px] sm:text-[11px] opacity-80 mt-0.5">완료한 시나리오</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center backdrop-blur-sm">
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center backdrop-blur-sm">
               <div className="flex items-center justify-center gap-1">
-                <div className="text-xl font-bold">92</div>
-                <Star className="w-3.5 h-3.5 text-[#FBBC04] fill-current" />
+                <div className="text-lg sm:text-xl font-bold">92</div>
+                <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#FBBC04] fill-current" />
               </div>
-              <div className="text-[11px] opacity-80 mt-0.5">평균 점수</div>
+              <div className="text-[10px] sm:text-[11px] opacity-80 mt-0.5">평균 점수</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center backdrop-blur-sm">
-              <div className="text-xl font-bold">{recentAttempts.length}</div>
-              <div className="text-[11px] opacity-80 mt-0.5">총 시도 횟수</div>
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center backdrop-blur-sm">
+              <div className="text-lg sm:text-xl font-bold">{recentAttempts.length}</div>
+              <div className="text-[10px] sm:text-[11px] opacity-80 mt-0.5">총 시도 횟수</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center backdrop-blur-sm">
-              <div className="text-xl font-bold">{scenarios.length - scenarios.filter(s => s.locked).length}</div>
-              <div className="text-[11px] opacity-80 mt-0.5">이용 가능</div>
+            <div className="bg-white/10 rounded-lg p-2 sm:p-3 text-center backdrop-blur-sm">
+              <div className="text-lg sm:text-xl font-bold">{scenarios.length - scenarios.filter(s => s.locked).length}</div>
+              <div className="text-[10px] sm:text-[11px] opacity-80 mt-0.5">이용 가능</div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 flex-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 flex-shrink-0">
           {/* Left - Scenarios */}
-          <div className="col-span-2 bg-white rounded-lg shadow-sm flex flex-col overflow-hidden">
+          <div className="lg:col-span-2 bg-white rounded-lg shadow-sm">
             <div className="p-3 border-b border-[#E0E0E0]">
-              <h2 className="text-base font-bold text-[#333333]">시나리오 선택</h2>
+              <h2 className="text-sm sm:text-base font-bold text-[#333333]">시나리오 선택</h2>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-3">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="p-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {scenarios.map((scenario) => (
                   <div 
                     key={scenario.id}
@@ -191,7 +191,7 @@ export default function SimulationPage() {
           </div>
 
           {/* Right - Recent Attempts */}
-          <div className="bg-white rounded-lg shadow-sm flex flex-col overflow-hidden">
+          <div className="bg-white rounded-lg shadow-sm">
             <div className="p-3 border-b border-[#E0E0E0]">
               <h2 className="text-base font-bold text-[#333333] flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-[#FBBC04]" />
@@ -199,7 +199,7 @@ export default function SimulationPage() {
               </h2>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-3">
+            <div className="p-3">
               <div className="space-y-3">
                 {recentAttempts.map((attempt, index) => (
                   <div 

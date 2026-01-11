@@ -104,7 +104,7 @@ export default function AdminConsultationManagePage() {
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-60px)] flex flex-col p-4 gap-3 bg-[#F5F5F5]">
+      <div className="h-[calc(100vh-60px)] flex flex-col p-3 sm:p-4 gap-3 bg-[#F5F5F5] overflow-y-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 flex-shrink-0">
           <h1 className="text-base font-bold text-[#333333]">상담 관리</h1>
@@ -112,75 +112,80 @@ export default function AdminConsultationManagePage() {
 
         {/* 필터 바 */}
         <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 flex-shrink-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
               <span className="text-[10px] text-[#666666] font-semibold">기간:</span>
-              <input 
-                type="date"
-                value={filters.dateFrom}
-                onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-                className="h-8 px-2 border border-[#E0E0E0] rounded text-xs placeholder:text-[10px]"
-                style={{ width: '140px' }}
-              />
-              <span className="text-xs text-[#666666]">~</span>
-              <input 
-                type="date"
-                value={filters.dateTo}
-                onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-                className="h-8 px-2 border border-[#E0E0E0] rounded text-xs placeholder:text-[10px]"
-                style={{ width: '140px' }}
-              />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input 
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+                  className="flex-1 sm:flex-none h-8 px-2 border border-[#E0E0E0] rounded text-xs placeholder:text-[10px]"
+                  style={{ width: '140px' }}
+                />
+                <span className="text-xs text-[#666666]">~</span>
+                <input 
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+                  className="flex-1 sm:flex-none h-8 px-2 border border-[#E0E0E0] rounded text-xs placeholder:text-[10px]"
+                  style={{ width: '140px' }}
+                />
+              </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[#666666] font-semibold">상담사:</span>
-              <select 
-                className="h-8 px-2 border border-[#E0E0E0] rounded text-xs"
-                style={{ width: '120px' }}
-                value={filters.agent}
-                onChange={(e) => setFilters({...filters, agent: e.target.value})}
-              >
-                <option>전체</option>
-                <option>홍길동</option>
-                <option>이영희</option>
-                <option>김민수</option>
-                <option>김태희</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[#666666] font-semibold">카테고리:</span>
-              <select 
-                className="h-8 px-2 border border-[#E0E0E0] rounded text-xs"
-                style={{ width: '120px' }}
-                value={filters.category}
-                onChange={(e) => setFilters({...filters, category: e.target.value})}
-              >
-                <option>전체</option>
-                <option>카드분실</option>
-                <option>해외결제</option>
-                <option>수수료문의</option>
-                <option>포인트</option>
-                <option>한도조회</option>
-                <option>프로모션</option>
-                <option>기타</option>
-              </select>
-            </div>
-
-            <div className="flex gap-2 ml-auto">
-              {['전체', '완료', '진행중', '미완료'].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setFilters({...filters, status})}
-                  className={`h-8 px-3 rounded text-xs font-medium transition-colors ${
-                    filters.status === status
-                      ? 'bg-[#0047AB] text-white'
-                      : 'bg-[#F5F5F5] text-[#666666] hover:bg-[#E0E0E0]'
-                  }`}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-[#666666] font-semibold">상담사</span>
+                <select 
+                  className="h-8 px-2 border border-[#E0E0E0] rounded text-xs"
+                  value={filters.agent}
+                  onChange={(e) => setFilters({...filters, agent: e.target.value})}
                 >
-                  {status}
-                </button>
-              ))}
+                  <option>전체</option>
+                  <option>홍길동</option>
+                  <option>이영희</option>
+                  <option>김민수</option>
+                  <option>김태희</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-[#666666] font-semibold">카테고리</span>
+                <select 
+                  className="h-8 px-2 border border-[#E0E0E0] rounded text-xs"
+                  value={filters.category}
+                  onChange={(e) => setFilters({...filters, category: e.target.value})}
+                >
+                  <option>전체</option>
+                  <option>카드분실</option>
+                  <option>해외결제</option>
+                  <option>수수료문의</option>
+                  <option>포인트</option>
+                  <option>한도조회</option>
+                  <option>프로모션</option>
+                  <option>기타</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-[#666666] font-semibold">상태</span>
+                <div className="flex gap-2">
+                  {['전체', '완료', '진행중', '미완료'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setFilters({...filters, status})}
+                      className={`h-8 px-3 rounded text-xs font-medium transition-colors ${
+                        filters.status === status
+                          ? 'bg-[#0047AB] text-white'
+                          : 'bg-[#F5F5F5] text-[#666666] hover:bg-[#E0E0E0]'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="text-xs text-[#666666] font-bold">

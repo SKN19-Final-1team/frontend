@@ -224,6 +224,9 @@ export default function RealTimeConsultationPage() {
   const [isSaving, setIsSaving] = useState(false); // 저장 상태
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle'); // 저장 상태 표시
   
+  // 모바일 탭 상태 (모바일/태블릿 전용)
+  const [mobileTab, setMobileTab] = useState<'customer' | 'consultation' | 'control'>('consultation');
+  
   // 대기 콜 현황 상태
   const [waitingCalls, setWaitingCalls] = useState(getInitialWaitingCalls());
   const [totalWaitingCalls, setTotalWaitingCalls] = useState(
@@ -373,7 +376,7 @@ export default function RealTimeConsultationPage() {
     if (query.includes('재발급') || query.includes('배송')) {
       return '재발급 카드는 신청 후 3-5 영업일 내 등록된 주소로 배송됩니다. 배송비는 무료이며, 택배 추적 번호는 SMS로 발송됩니다.';
     } else if (query.includes('수수료') || query.includes('연회비')) {
-      return '연회비는 카�� 발급 후 1년 후 청구됩니다. 전년도 실적 조건을 충족하면 면제됩니다. 실적 기준은 월 30만원 이상 사용입니다.';
+      return '연회비는 카 발급 후 1년 후 청구됩니다. 전년도 실적 조건을 충족하면 면제됩니다. 실적 기준은 월 30만원 이상 사용입니다.';
     } else if (query.includes('해외') || query.includes('결제')) {
       return '해외 결제는 기본적으로 활성화되어 있습니다. 단, 일부 국가는 보안 정책으로 인해 사전 승인이 필요할 수 있습니다. 고객센터에서 즉시 해제 가능합니다.';
     } else {
@@ -419,16 +422,73 @@ export default function RealTimeConsultationPage() {
   return (
     <MainLayout>
       <div className="h-[calc(100vh-60px)] flex bg-[#F5F5F5] relative">
-        {/* 폴딩 버튼 - 미니멀 디자인 */}
+        {/* 모바일/태블릿 탭 네비게이션 (lg 미만에서만 표시) */}
+        <div className="lg:hidden fixed top-[60px] left-0 right-0 bg-white border-b border-[#E0E0E0] z-50">
+          {/* 통화 상태 표시 (통화 중일 때만) */}
+          {isCallActive && (
+            <div className="bg-gradient-to-r from-[#34A853] to-[#2E7D32] text-white px-4 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                <span className="text-xs font-bold">통화 중</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold tabular-nums">{formatTime(callTime)}</span>
+                <button 
+                  onClick={handleEndCallClick}
+                  className="w-7 h-7 bg-[#EA4335] rounded-lg flex items-center justify-center hover:bg-[#C62828] transition-all"
+                  title="통화 종료"
+                >
+                  <PhoneOff className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* 탭 버튼들 */}
+          <div className="flex">
+            <button
+              onClick={() => setMobileTab('customer')}
+              className={`flex-1 px-4 py-3 text-xs font-medium transition-colors ${
+                mobileTab === 'customer'
+                  ? 'text-[#0047AB] border-b-2 border-[#0047AB] bg-[#F8FBFF]'
+                  : 'text-[#666666] hover:text-[#333333] hover:bg-[#F5F5F5]'
+              }`}
+            >
+              고객정보
+            </button>
+            <button
+              onClick={() => setMobileTab('consultation')}
+              className={`flex-1 px-4 py-3 text-xs font-medium transition-colors ${
+                mobileTab === 'consultation'
+                  ? 'text-[#0047AB] border-b-2 border-[#0047AB] bg-[#F8FBFF]'
+                  : 'text-[#666666] hover:text-[#333333] hover:bg-[#F5F5F5]'
+              }`}
+            >
+              상담내용
+            </button>
+            <button
+              onClick={() => setMobileTab('control')}
+              className={`flex-1 px-4 py-3 text-xs font-medium transition-colors ${
+                mobileTab === 'control'
+                  ? 'text-[#0047AB] border-b-2 border-[#0047AB] bg-[#F8FBFF]'
+                  : 'text-[#666666] hover:text-[#333333] hover:bg-[#F5F5F5]'
+              }`}
+            >
+              메모/검색
+            </button>
+          </div>
+        </div>
+
+        {/* 폴딩 버튼 - 데스크톱에서만 표시 */}
         <button
           onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
-          className="fixed top-1/2 -translate-y-1/2 z-[60] w-6 h-6 bg-white border border-[#D1D5DB] text-[#666666] rounded-full flex items-center justify-center hover:border-[#0047AB] hover:text-[#0047AB] hover:shadow-md transition-all duration-300 shadow-sm"
+          className="hidden lg:block fixed top-1/2 -translate-y-1/2 z-[60] w-6 h-6 bg-white border border-[#D1D5DB] text-[#666666] rounded-full flex items-center justify-center hover:border-[#0047AB] hover:text-[#0047AB] hover:shadow-md transition-all duration-300 shadow-sm"
           style={{ 
             marginTop: '30px',
             left: `${
               isLeftSidebarCollapsed 
-                ? (isSidebarExpanded ? 188 : 44)  // 고객정보 접혔을 때: 네비게이션 너비 - 12px
-                : (isSidebarExpanded ? 388 : 244)  // 고객정보 펼쳐졌을 때: 비게이션 + 200px - 12px
+                ? (isSidebarExpanded ? 188 : 44)
+                : (isSidebarExpanded ? 388 : 244)
             }px`
           }}
         >
@@ -439,13 +499,17 @@ export default function RealTimeConsultationPage() {
           />
         </button>
 
-        {/* 좌측 열 - 폴딩 가능 */}
+        {/* 좌측 열 - 고객정보 (데스크톱: 조건부 표시, 모바일: 탭 전환) */}
         <div 
-          className={`bg-[#FAFAFA] border-r border-[#E0E0E0] flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-300 relative ${
-            isLeftSidebarCollapsed ? 'w-0' : 'w-[200px]'
-          }`}
+          className={`
+            bg-[#FAFAFA] border-r border-[#E0E0E0] flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-300 relative
+            lg:block
+            ${mobileTab === 'customer' ? 'block' : 'hidden'}
+            ${isLeftSidebarCollapsed ? 'lg:w-0' : 'lg:w-[200px]'}
+            w-full lg:mt-0 mt-[49px]
+          `}
         >
-          <div className={`w-[200px] p-3 flex flex-col overflow-y-auto ${isLeftSidebarCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+          <div className={`w-full lg:w-[200px] p-3 flex flex-col overflow-y-auto ${isLeftSidebarCollapsed ? 'lg:opacity-0' : 'lg:opacity-100'}`}>
             {/* 대기 콜 현황 - 최상단 */}
             <div className="bg-gradient-to-r from-[#F8FBFF] to-[#F0F7FF] rounded-lg p-2.5 mb-3 flex-shrink-0 shadow-sm border border-[#E0E0E0]">
               <div className="flex items-center justify-between mb-2">
@@ -523,10 +587,14 @@ export default function RealTimeConsultationPage() {
           </div>
         </div>
 
-        {/* 중앙 열 - 동적 너비 */}
-        <div className={`bg-white p-4 overflow-y-auto transition-all duration-300 ${
-          isLeftSidebarCollapsed ? 'w-[calc(75%-0px)]' : 'w-[calc(75%-200px)]'
-        }`}>
+        {/* 중앙 열 - 동적 너비 (데스크톱: 동적, 모바일: 탭 전환) */}
+        <div className={`
+          bg-white p-4 overflow-y-auto transition-all duration-300
+          lg:block
+          ${mobileTab === 'consultation' ? 'block' : 'hidden'}
+          ${isLeftSidebarCollapsed ? 'lg:w-[calc(75%-0px)]' : 'lg:w-[calc(75%-200px)]'}
+          w-full lg:mt-0 mt-[49px]
+        `}>
           {/* STT 키워드 배지 */}
           <div className="mb-3">
             <h3 className="text-xs font-bold text-[#333333] mb-2">인입 키워드</h3>
@@ -545,7 +613,7 @@ export default function RealTimeConsultationPage() {
           {/* 현재 상황 칸반보드 */}
           <div className="mb-4">
             <h2 className="text-xs font-bold text-[#333333] mb-2">현재 상황 관련 정보</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {currentSituationCards.map((card) => (
                 <div 
                   key={card.id}
@@ -614,7 +682,7 @@ export default function RealTimeConsultationPage() {
           {/* 다음 단계 칸반보드 */}
           <div className="mb-4">
             <h2 className="text-xs font-bold text-[#333333] mb-2">다음 단계 예상 정보</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {nextStepCards.map((card) => (
                 <div 
                   key={card.id}
@@ -698,10 +766,16 @@ export default function RealTimeConsultationPage() {
           </div>
         </div>
 
-        {/* 우측 열 - 고정 너비 25% */}
-        <div className="w-[25%] bg-[#FAFAFA] p-3 flex flex-col overflow-hidden">
-          {/* 통화 컨트롤 - 세련된 디자인 */}
-          <div className="bg-gradient-to-r from-white to-[#F8FBFF] rounded-lg border border-[#E0E0E0] p-3 mb-3 flex-shrink-0 shadow-sm">
+        {/* 우측 열 - 고정 너비 25% (데스크톱: 고정, 모바일: 탭 전환) */}
+        <div className={`
+          bg-[#FAFAFA] p-3 flex flex-col overflow-hidden
+          lg:block
+          ${mobileTab === 'control' ? 'block' : 'hidden'}
+          lg:w-[25%]
+          w-full lg:mt-0 mt-[49px]
+        `}>
+          {/* 통화 컨트롤 - 데스크톱에서만 표시 (모바일/태블릿에서는 상단 통화 상태바 사용) */}
+          <div className="hidden lg:block bg-gradient-to-r from-white to-[#F8FBFF] rounded-lg border border-[#E0E0E0] p-3 mb-3 flex-shrink-0 shadow-sm">
             <div className="flex items-center justify-between">
               {/* 통화 시간 */}
               <div className="flex items-center gap-2">
