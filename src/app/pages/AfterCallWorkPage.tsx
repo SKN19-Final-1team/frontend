@@ -23,6 +23,9 @@ export default function AfterCallWorkPage() {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  
+  // 모바일 탭 상태 (모바일/태블릿 전용)
+  const [mobileTab, setMobileTab] = useState<'transcript' | 'acw'>('acw');
 
   // 페이지 로드 시 localStorage에서 메모 불러오기
   useEffect(() => {
@@ -121,9 +124,39 @@ export default function AfterCallWorkPage() {
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-60px)] flex bg-[#F5F5F5]">
-        {/* 좌측 열 (~30% 너비) */}
-        <div className="w-[30%] bg-[#FAFAFA] p-3 overflow-y-auto border-r border-[#E0E0E0]">
+      <div className="h-[calc(100vh-60px)] flex bg-[#F5F5F5] relative">
+        {/* 모바일/태블릿 탭 네비게이션 (lg 미만에서만 표시) */}
+        <div className="lg:hidden fixed top-[60px] left-0 right-0 bg-white border-b border-[#E0E0E0] z-50 flex">
+          <button
+            onClick={() => setMobileTab('transcript')}
+            className={`flex-1 px-4 py-3 text-xs font-medium transition-colors ${
+              mobileTab === 'transcript'
+                ? 'text-[#0047AB] border-b-2 border-[#0047AB] bg-[#F8FBFF]'
+                : 'text-[#666666] hover:text-[#333333] hover:bg-[#F5F5F5]'
+            }`}
+          >
+            상담 전문/피드백
+          </button>
+          <button
+            onClick={() => setMobileTab('acw')}
+            className={`flex-1 px-4 py-3 text-xs font-medium transition-colors ${
+              mobileTab === 'acw'
+                ? 'text-[#0047AB] border-b-2 border-[#0047AB] bg-[#F8FBFF]'
+                : 'text-[#666666] hover:text-[#333333] hover:bg-[#F5F5F5]'
+            }`}
+          >
+            후처리
+          </button>
+        </div>
+
+        {/* 좌측 열 - 상담 전문/피드백 (데스크톱: 30%, 모바일: 탭 전환) */}
+        <div className={`
+          bg-[#FAFAFA] p-3 overflow-y-auto border-r border-[#E0E0E0]
+          lg:block
+          ${mobileTab === 'transcript' ? 'block' : 'hidden'}
+          lg:w-[30%]
+          w-full lg:mt-0 mt-[49px]
+        `}>
           {/* 상담 전문 */}
           <div className="mb-3">
             <h3 className="text-xs font-bold text-[#333333] mb-2">상담 전문</h3>
@@ -203,8 +236,14 @@ export default function AfterCallWorkPage() {
           </details>
         </div>
 
-        {/* 우측 열 (메인 ~70% 너비) */}
-        <div className="flex-1 bg-white p-4 overflow-y-auto">
+        {/* 우측 열 (메인 ~70% 너비) - 모바일 탭 전환 */}
+        <div className={`
+          bg-white p-4 overflow-y-auto
+          lg:block
+          ${mobileTab === 'acw' ? 'block' : 'hidden'}
+          lg:flex-1
+          w-full lg:mt-0 mt-[49px]
+        `}>
           {/* 유사 사례 참고 카드 */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-white border-2 border-[#0047AB] rounded-lg p-3">
@@ -357,7 +396,7 @@ export default function AfterCallWorkPage() {
 
             {/* 상담 메모 */}
             <div>
-              <Label className="text-xs text-[#666666] mb-1.5 block">담 메모</Label>
+              <Label className="text-xs text-[#666666] mb-1.5 block">상담 메모</Label>
               <Textarea
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
