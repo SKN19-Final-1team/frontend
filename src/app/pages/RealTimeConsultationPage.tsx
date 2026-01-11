@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSidebar } from '../contexts/SidebarContext';
+import { useVoiceRecorder } from "./../hooks/useVoiceRecoders"
 
 // Mock Data
 const customerInfo = {
@@ -237,6 +238,9 @@ export default function RealTimeConsultationPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const waitingCallsTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 전화 웹소켓
+  const { start: startRecording, stop: stopRecording, wsStatus } = useVoiceRecorder();
+
   // 대기 콜 실시간 타이머 (매초마다 대기 시간 증가)
   useEffect(() => {
     waitingCallsTimerRef.current = setInterval(() => {
@@ -297,9 +301,13 @@ export default function RealTimeConsultationPage() {
     // 이미 localStorage는 후처리에서 정리됨
   }, []);
 
-  const handleStartCall = () => {
+  const handleStartCall = async () => {
     setIsCallActive(true);
     setCallTime(0); // 타이머 리셋
+
+    // 녹음 및 소켓 연결 시작
+    await startRecording(); 
+    console.log("통화 및 녹음 시작");
   };
 
   const handleCopyScript = () => {
@@ -312,14 +320,18 @@ export default function RealTimeConsultationPage() {
   };
 
   const handleConfirmEndCall = () => {
+    stopRecording();
+
     // 메모를 localStorage에 저장하고 후처리로 이동
     if (memo.trim()) {
       localStorage.setItem('currentConsultationMemo', memo);
     }
     localStorage.setItem('consultationCallTime', callTime.toString());
+    
     setIsCallActive(false);
     setIsEndCallModalOpen(false);
     navigate('/acw');
+    console.log("통화 종료됨");
   };
 
   const handleCancelEndCall = () => {
