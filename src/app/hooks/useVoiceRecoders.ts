@@ -4,6 +4,7 @@ import { encodeWAV } from './../../utils/audio'
 const SAMPLE_RATE = 16000;
 const VAD_THRESHOLD = 0.025;
 const SILENCE_DURATION = 1000;
+const MAX_RECORDING_DURATION = 1500;
 
 type WsStatus = 'Connected' | 'Disconnected' | 'Error';
 
@@ -19,6 +20,7 @@ export const useVoiceRecorder = () => {
   const audioBufferRef = useRef<Float32Array[]>([]);
   const isSpeakingRef = useRef<boolean>(false);
   const silenceStartRef = useRef<number | null>(null);
+  const recordingStartRef = useRef<number | null>(null);
 
   // 오디오 데이터 전송 함수
   const sendAudioData = useCallback(() => {
@@ -37,6 +39,9 @@ export const useVoiceRecorder = () => {
     if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
       websocket.current.send(wavBuffer);
     }
+
+    audioBufferRef.current = [];
+    recordingStartRef.current = Date.now(); // 강제 전송 후 다시 카운트 시작
   }, []);
 
   // 오디오 처리 콜백
@@ -50,19 +55,31 @@ export const useVoiceRecorder = () => {
     const rms = Math.sqrt(sum / inputData.length);
 
     if (rms > VAD_THRESHOLD) {
-      if (!isSpeakingRef.current) isSpeakingRef.current = true;
+      if (!isSpeakingRef.current) {
+        isSpeakingRef.current = true;
+        recordingStartRef.current = Date.now(); // 처음 말을 시작한 시점 기록
+      }
       silenceStartRef.current = null;
       audioBufferRef.current.push(new Float32Array(inputData));
+
+      // 최대 녹음 시간 체크
+      if (recordingStartRef.current && Date.now() - recordingStartRef.current > MAX_RECORDING_DURATION) {
+        console.log("5초를 초과하여 데이터 전송");
+        sendAudioData();
+        // 메모리 비우기는 sendAudioData 내부에서 처리됨
+      }
+
     } else {
       if (isSpeakingRef.current) {
         audioBufferRef.current.push(new Float32Array(inputData));
         if (silenceStartRef.current === null) silenceStartRef.current = Date.now();
 
+        // 침묵 감지 시 전송
         if (Date.now() - silenceStartRef.current > SILENCE_DURATION) {
           sendAudioData();
           isSpeakingRef.current = false;
           silenceStartRef.current = null;
-          audioBufferRef.current = [];
+          recordingStartRef.current = null; // 초기화
         }
       }
     }
