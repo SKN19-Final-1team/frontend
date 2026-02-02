@@ -1,6 +1,9 @@
-import { X, Play, Pause, User, Clock, CheckCircle, FileText, Download } from 'lucide-react';
+import { Play, Pause, User, Clock, CheckCircle, FileText, Download, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useState, useRef, useEffect } from 'react';
+import { formatBirthDateWithAge } from '@/utils/age';
+import DocumentDetailModal from './DocumentDetailModal';
+import RecordingDownloadWarningModal from './RecordingDownloadWarningModal';
 
 interface ConsultationDetailModalProps {
   isOpen: boolean;
@@ -9,6 +12,8 @@ interface ConsultationDetailModalProps {
     id: string;
     status: string;
     category: string;
+    categoryMain?: string;
+    categorySub?: string;
     title?: string;
     customer: string;
     time?: string;
@@ -23,7 +28,23 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(327); // 5분 27초
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false); // ⭐ DocumentDetailModal 상태
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null); // ⭐ 선택된 문서 ID
+  const [isRecordingDownloadWarningModalOpen, setIsRecordingDownloadWarningModalOpen] = useState(false); // ⭐ 녹취 다운로드 경고 모달 상태
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ⭐ Phase 16-1: categoryMain/categorySub 파싱 (fallback)
+  const getCategoryMain = () => {
+    if (consultation.categoryMain) return consultation.categoryMain;
+    const parts = consultation.category.split(' > ');
+    return parts[0]?.trim() || '기타';
+  };
+
+  const getCategorySub = () => {
+    if (consultation.categorySub) return consultation.categorySub;
+    const parts = consultation.category.split(' > ');
+    return parts[1]?.trim() || '서비스 이용방법 안내';
+  };
 
   useEffect(() => {
     if (isPlaying) {
@@ -49,6 +70,27 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
     };
   }, [isPlaying, duration]);
 
+  // ⭐ ESC 키 이벤트 리스너 추가
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      // ⭐ Phase 10-6: DocumentDetailModal이 열려있으면 ConsultationDetailModal의 ESC는 무시
+      if (e.key === 'Escape' && isOpen && !isDocumentModalOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      // 모달 열릴 때 body 스크롤 잠금
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, isDocumentModalOpen, onClose]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -60,12 +102,20 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
     setCurrentTime(newTime);
   };
 
+  // ⭐ Phase 11-2: 녹취 다운로드 기능
+  const handleDownloadRecording = () => {
+    setIsRecordingDownloadWarningModalOpen(true);
+  };
+
   if (!isOpen) return null;
 
   // Mock detailed data
   const detailData = {
-    customerId: 'CUST-12345',
+    customerId: 'CUST-TEDDY-00001', // ⭐ Phase 10-5: 신규 형식
+    customerName: consultation.customer, // ⭐ Phase 10-5: 이름 추가
     customerPhone: '010-1234-5678',
+    customerBirthDate: '1982-05-15', // ⭐ Phase 10-5: 생년월일 추가
+    customerAddress: '서울시 강남구 테헤란로 123', // ⭐ Phase 10-5: 주소 추가
     startTime: consultation.time || '14:32:15',
     endTime: '14:37:42',
     duration: consultation.duration || '5:27',
@@ -78,24 +128,39 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
       { time: '14:37:30', action: '상담 종료 및 만족도 확인' },
     ],
     documents: [
-      '카드 분실 신고 처리 절차',
-      '재발급 카드 배송 안내',
-      '분실 카드 부정 사용 보상 정책',
+      {
+        id: 'card-1-1-1', // ⭐ Phase 10-6: 실제 scenarios.ts의 문서 ID 사용
+        title: '카드 즉시 사용 정지',
+        content: '고객의 카드 분실 신고 시 즉시 카드 사용을 정지하여 부정 사용을 방지합니다.'
+      },
+      {
+        id: 'card-1-1-2', // ⭐ Phase 10-6: 실제 scenarios.ts의 문서 ID 사용
+        title: '분실 신고 접수 완료',
+        content: '분실 신고가 정식으로 접수되었으며, 신고 번호가 발급됩니다.'
+      },
+      {
+        id: 'card-1-1-3', // ⭐ Phase 10-6: 실제 scenarios.ts의 문서 ID 사용
+        title: '재발급 카드 신청',
+        content: '분실 카드를 대체할 새로운 카드를 발급합니다.'
+      },
     ],
     satisfaction: 5,
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-3" onClick={onClose}>
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <div 
-        className="bg-white rounded-lg shadow-2xl w-full max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white rounded-lg w-full max-w-[900px] max-h-[90vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header - 4K 스타일 */}
-        <div className="bg-gradient-to-r from-[#0047AB] to-[#4A90E2] p-2.5 sm:p-3 text-white flex-shrink-0">
+        <div className="bg-gradient-to-r from-[#0047AB] to-[#4A90E2] p-3 text-white flex-shrink-0">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-sm sm:text-base font-bold mb-0.5">상담 상세 정보</h2>
+              <h2 className="text-base font-bold mb-0.5">상담 상세 정보</h2>
               <p className="text-[11px] opacity-90 font-mono">{consultation.id}</p>
             </div>
             <button 
@@ -116,7 +181,10 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
               {consultation.status}
             </span>
             <span className="px-2 py-0.5 bg-white/20 rounded text-[11px] font-medium">
-              {consultation.category}
+              {getCategoryMain()}
+            </span>
+            <span className="px-2 py-0.5 bg-white/30 rounded text-[11px] font-medium">
+              {getCategorySub()}
             </span>
             {consultation.fcr && (
               <span className="px-2 py-0.5 bg-[#34A853] rounded text-[11px] font-medium flex items-center gap-1">
@@ -136,9 +204,21 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
                 <User className="w-3.5 h-3.5 text-[#0047AB]" />
                 <span className="text-[11px] font-semibold text-[#666666]">고객 정보</span>
               </div>
-              <p className="text-xs font-bold text-[#333333] mb-0.5">{consultation.customer}</p>
-              <p className="text-[11px] text-[#666666] font-mono">{detailData.customerPhone}</p>
-              <p className="text-[11px] text-[#999999] mt-0.5">ID: {detailData.customerId}</p>
+
+              {/* 1행: 이름 + ID (작게) */}
+              <p className="text-xs font-bold text-[#333333] mb-0.5">
+                {detailData.customerName} 
+                <span className="text-[10px] text-[#999999] font-normal ml-2">ID: {detailData.customerId}</span>
+              </p>
+              
+              {/* 2행: 전화번호 | 생년월일 */}
+              <div className="grid grid-cols-2 gap-x-4 mb-0.5">
+                <p className="text-[11px] text-[#666666]">전화번호: <span className="font-mono">{detailData.customerPhone}</span></p>
+                <p className="text-[11px] text-[#666666]">생년월일: <span className="font-mono">{formatBirthDateWithAge(detailData.customerBirthDate)}</span></p>
+              </div>
+
+              {/* 3행: 주소 (전체 너비) */}
+              <p className="text-[11px] text-[#666666] truncate" title={detailData.customerAddress}>주소: {detailData.customerAddress}</p>
             </div>
 
             <div className="bg-[#F8F9FA] rounded-lg p-2.5 border border-[#E0E0E0]">
@@ -186,7 +266,7 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
                 </div>
               </div>
 
-              <Button variant="outline" size="sm" className="h-7 text-[10px] px-2">
+              <Button variant="outline" size="sm" className="h-7 text-[10px] px-2" onClick={handleDownloadRecording}>
                 <Download className="w-3 h-3 mr-1" />
                 다운로드
               </Button>
@@ -222,18 +302,22 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
             </div>
           </div>
 
-          {/* Referenced Documents */}
+          {/* Referenced Documents - ⭐ Phase 10-6: DocumentDetailModal 사용 */}
           <div className="bg-white rounded-lg border border-[#E0E0E0] p-2.5">
             <h3 className="text-xs font-bold text-[#333333] mb-2">참조 문서</h3>
             <div className="space-y-1.5">
               {detailData.documents.map((doc, index) => (
-                <div 
+                <button
                   key={index}
-                  className="flex items-center gap-2 p-1.5 rounded bg-[#F8F9FA] hover:bg-[#E8F1FC] cursor-pointer transition-colors"
+                  onClick={() => {
+                    setSelectedDocumentId(doc.id);
+                    setIsDocumentModalOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2 p-1.5 rounded bg-[#F8F9FA] hover:bg-[#E8F1FC] transition-colors cursor-pointer text-left"
                 >
                   <FileText className="w-3.5 h-3.5 text-[#0047AB] flex-shrink-0" />
-                  <span className="text-xs text-[#333333]">{doc}</span>
-                </div>
+                  <span className="text-xs text-[#333333]">{doc.title}</span>
+                </button>
               ))}
             </div>
           </div>
@@ -263,6 +347,28 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
           </div>
         </div>
       </div>
+
+      {/* ⭐ Phase 10-6: 문서 상세 모달 */}
+      {isDocumentModalOpen && selectedDocumentId && (
+        <DocumentDetailModal
+          isOpen={isDocumentModalOpen}
+          onClose={() => {
+            setIsDocumentModalOpen(false);
+            setSelectedDocumentId(null);
+          }}
+          documentId={selectedDocumentId}
+        />
+      )}
+
+      {/* ⭐ 녹취 다운로드 경고 모달 */}
+      {isRecordingDownloadWarningModalOpen && (
+        <RecordingDownloadWarningModal
+          isOpen={isRecordingDownloadWarningModalOpen}
+          onClose={() => setIsRecordingDownloadWarningModalOpen(false)}
+          consultation={consultation}
+          detailData={detailData}
+        />
+      )}
     </div>
   );
 }

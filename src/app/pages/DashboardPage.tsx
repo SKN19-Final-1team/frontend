@@ -1,10 +1,13 @@
-import MainLayout from '../components/layout/MainLayout';
-import { CheckCircle, Clock, XCircle, AlertCircle, ExternalLink, Star, TrendingUp, TrendingDown, Minus, Target, Users, BookOpen, Shield, Play } from 'lucide-react';
-import ConsultationDetailModal from '../components/modals/ConsultationDetailModal';
-import AnnouncementModal from '../components/modals/AnnouncementModal';
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { noticesData, consultationsData, frequentInquiriesData, employeesData, simulationsData } from '../../data/mockData';
+import { frequentInquiriesDetailData } from '../../data/frequentInquiriesDetail';
+import { enrichConsultationData } from '../../data/consultationsDataHelper';
+import ConsultationDetailModal from '../components/modals/ConsultationDetailModal';
+import AnnouncementModal from '../components/modals/AnnouncementModal';
+import FrequentInquiryModal from '../components/modals/FrequentInquiryModal';
+import { useState, useEffect } from 'react';
+import { CheckCircle, Clock, XCircle, AlertCircle, ExternalLink, Star, TrendingUp, TrendingDown, Minus, Target, Users, BookOpen, Shield, Play } from 'lucide-react';
+import MainLayout from '../components/layout/MainLayout';
 
 const stats = {
   todayCalls: 127,
@@ -46,18 +49,15 @@ const teamStats = [
   { team: 'C팀', calls: 119, fcr: 91, color: '#FBBC04' },
 ];
 
-const consultationHistory = consultationsData.map(c => ({
-  id: c.id,
-  status: c.status,
-  category: c.category,
-  title: c.memo || '상담 내용',
-  customer: c.customer,
-  agent: c.agent,
-  time: c.datetime.split(' ')[1],
-  date: c.datetime.split(' ')[0],
-  fcr: c.fcr,
-  duration: c.duration
-}));
+const consultationHistory = consultationsData.map(c => {
+  const enriched = enrichConsultationData(c);
+  return {
+    ...enriched,
+    title: enriched.memo || '상담 내용',
+    time: enriched.datetime.split(' ')[1],
+    date: enriched.datetime.split(' ')[0],
+  };
+});
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -66,6 +66,8 @@ export default function DashboardPage() {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null);
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
   const [announcements, setAnnouncements] = useState(noticesData.slice(0, 5));
+  const [selectedFrequentInquiry, setSelectedFrequentInquiry] = useState<any>(null);
+  const [isFrequentInquiryModalOpen, setIsFrequentInquiryModalOpen] = useState(false);
 
   // 현재 사용자 권한 확인 (localStorage에서)
   const userRole = localStorage.getItem('userRole') || 'employee';
@@ -96,6 +98,33 @@ export default function DashboardPage() {
   const handleAnnouncementClick = (announcement: any) => {
     setSelectedAnnouncement(announcement);
     setIsAnnouncementModalOpen(true);
+    
+    // 조회수 증가
+    setAnnouncements(prev => {
+      const updatedAnnouncements = prev.map(n =>
+        n.id === announcement.id ? { ...n, views: n.views + 1 } : n
+      );
+      
+      // LocalStorage 전체 공지사항 업데이트
+      const savedNotices = localStorage.getItem('notices');
+      if (savedNotices) {
+        try {
+          const allNotices = JSON.parse(savedNotices);
+          const updatedAllNotices = allNotices.map((n: any) =>
+            n.id === announcement.id ? { ...n, views: n.views + 1 } : n
+          );
+          localStorage.setItem('notices', JSON.stringify(updatedAllNotices));
+          
+          // 고정 공지사항만 필터링해서 저장
+          const pinnedNotices = updatedAllNotices.filter((n: any) => n.pinned);
+          localStorage.setItem('pinnedAnnouncements', JSON.stringify(pinnedNotices));
+        } catch (e) {
+          console.error('Failed to update views', e);
+        }
+      }
+      
+      return updatedAnnouncements;
+    });
   };
 
   const handleNoticeClick = () => {
@@ -104,6 +133,11 @@ export default function DashboardPage() {
     } else {
       navigate('/notice');
     }
+  };
+
+  const handleFrequentInquiryClick = (inquiry: any) => {
+    setSelectedFrequentInquiry(inquiry);
+    setIsFrequentInquiryModalOpen(true);
   };
 
   return (
@@ -202,6 +236,7 @@ export default function DashboardPage() {
                   {frequentInquiries.slice(0, 5).map((item) => (
                     <div 
                       key={item.id}
+                      onClick={() => handleFrequentInquiryClick(item)}
                       className="p-2 rounded-lg bg-[#F8F9FA] border border-[#E0E0E0] hover:bg-[#E8F1FC] hover:border-[#0047AB] cursor-pointer transition-all"
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -390,38 +425,43 @@ export default function DashboardPage() {
             </div>
             
             <div className="flex-1 flex flex-col gap-2 overflow-y-auto overflow-x-hidden">
-              {consultationHistory.slice(0, 20).map((item) => (
-                <div 
-                  key={item.id}
-                  onClick={() => handleConsultationClick(item)}
-                  className="flex items-center gap-2 sm:gap-2.5 p-2 sm:p-2.5 rounded-lg border border-[#F0F0F0] hover:bg-[#F8F9FA] hover:border-[#E0E0E0] cursor-pointer transition-all flex-shrink-0"
-                >
-                  <div className={`flex-shrink-0 w-[50px] sm:w-[55px] px-1.5 py-1 rounded text-[11px] font-medium text-center ${
-                    item.status === '완료' ? 'bg-[#E8F5E9] text-[#34A853]' :
-                    item.status === '진행중' ? 'bg-[#E3F2FD] text-[#0047AB]' :
-                    'bg-[#F5F5F5] text-[#999999]'
-                  }`}>
-                    {item.status}
-                  </div>
-                  <div className="flex-shrink-0 w-[65px] sm:w-[75px]">
-                    <span className="text-[11px] px-2 py-1 bg-[#E8F1FC] text-[#0047AB] rounded block text-center truncate">
-                      {item.category}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs sm:text-sm text-[#333333] line-clamp-1">{item.title}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[11px] text-[#666666] truncate">{item.customer}</span>
-                      <span className="text-[11px] text-[#999999]">{item.time}</span>
+              {consultationHistory.slice(0, 20).map((item) => {
+                return (
+                  <div 
+                    key={item.id}
+                    onClick={() => handleConsultationClick(item)}
+                    className="flex items-center gap-2 sm:gap-2.5 p-2 sm:p-2.5 rounded-lg border border-[#F0F0F0] hover:bg-[#F8F9FA] hover:border-[#E0E0E0] cursor-pointer transition-all flex-shrink-0"
+                  >
+                    <div className={`flex-shrink-0 w-[50px] sm:w-[55px] px-1.5 py-1 rounded text-[11px] font-medium text-center ${
+                      item.status === '완료' ? 'bg-[#E8F5E9] text-[#34A853]' :
+                      item.status === '진행중' ? 'bg-[#E3F2FD] text-[#0047AB]' :
+                      'bg-[#F5F5F5] text-[#999999]'
+                    }`}>
+                      {item.status}
                     </div>
-                  </div>
-                  {item.fcr && (
-                    <div className="flex-shrink-0 w-5 h-5 bg-[#34A853] text-white rounded-full flex items-center justify-center text-[10px] font-bold">
-                      ✓
+                    <div className="flex-shrink-0 flex flex-col gap-1 w-[90px] sm:w-[100px]">
+                      <span className="text-[10px] px-1.5 py-0.5 bg-[#0047AB]/10 text-[#0047AB] rounded text-center truncate font-medium">
+                        {item.categoryMain}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-[#E8F1FC] text-[#0047AB] rounded text-center truncate">
+                        {item.categorySub}
+                      </span>
                     </div>
-                  )}
-                </div>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs sm:text-sm text-[#333333] line-clamp-1">{item.title}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[11px] text-[#666666] truncate">{item.customer}</span>
+                        <span className="text-[11px] text-[#999999]">{item.time}</span>
+                      </div>
+                    </div>
+                    {item.fcr && (
+                      <div className="flex-shrink-0 w-5 h-5 bg-[#34A853] text-white rounded-full flex items-center justify-center text-[10px] font-bold">
+                        ✓
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -441,6 +481,15 @@ export default function DashboardPage() {
           isOpen={isAnnouncementModalOpen}
           onClose={() => setIsAnnouncementModalOpen(false)}
           announcement={selectedAnnouncement}
+        />
+      )}
+
+      {selectedFrequentInquiry && (
+        <FrequentInquiryModal
+          isOpen={isFrequentInquiryModalOpen}
+          onClose={() => setIsFrequentInquiryModalOpen(false)}
+          inquiry={selectedFrequentInquiry}
+          detailData={frequentInquiriesDetailData}
         />
       )}
     </MainLayout>

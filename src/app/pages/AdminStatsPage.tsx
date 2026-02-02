@@ -35,11 +35,11 @@ export default function AdminStatsPage() {
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-60px)] flex flex-col p-4 gap-3 bg-[#F5F5F5]">
+      <div className="min-h-[calc(100vh-60px)] flex flex-col p-6 gap-4 bg-[#F5F5F5] pb-20">
         {/* Header + KPI Cards in same row */}
-        <div className="grid grid-cols-5 gap-3 flex-shrink-0">
+        <div className="grid grid-cols-5 gap-4 flex-shrink-0">
           {/* Header Card */}
-          <div className="bg-gradient-to-r from-[#0047AB] to-[#003580] text-white rounded-lg shadow-md p-3 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-[#0047AB] to-[#003580] text-white rounded-lg shadow-md p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h1 className="text-base font-bold">총괄 현황</h1>
             </div>

@@ -89,9 +89,9 @@ export default function LandingPage() {
                 transition={{ delay: 0.3, duration: 1, ease: "easeOut" }}
                 className="mb-10 sm:mb-16"
               >
-                <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tight leading-none mb-4 sm:mb-6">
+                <h1 className="text-5xl sm:text-7xl md:text-8xl font-extrabold tracking-wider leading-none mb-4 sm:mb-6">
                   CALL
-                  <span className="text-[#FBBC04]">:</span>
+                  <span className="text-[#FBBC04] font-black tracking-normal" style={{ fontFamily: 'ui-monospace, monospace' }}>:</span>
                   ACT
                 </h1>
                 
@@ -100,7 +100,11 @@ export default function LandingPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6, duration: 0.8 }}
-                  className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-sm sm:text-base font-light text-gray-500"
+                  className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-sm sm:text-base"
+                  style={{
+                    fontWeight: 400,
+                    letterSpacing: '0.05em'
+                  }}
                 >
                   <span className="text-[#0047AB]">CALL</span>
                   <span className="text-gray-700">+</span>
@@ -117,12 +121,26 @@ export default function LandingPage() {
                 transition={{ delay: 0.9, duration: 1 }}
                 className="space-y-4 sm:space-y-6 mb-12 sm:mb-20"
               >
-                <p className="text-2xl sm:text-3xl md:text-4xl font-light text-white leading-relaxed px-4">
+                <p 
+                  className="text-2xl sm:text-3xl md:text-4xl text-white leading-relaxed px-4"
+                  style={{
+                    fontWeight: 300,
+                    letterSpacing: '0.02em',
+                    lineHeight: '1.6'
+                  }}
+                >
                   상담원의 모든 행동이<br />
-                  <span className="font-normal">즉시 이어집니다</span>
+                  <span style={{ fontWeight: 500 }}>즉시 이어집니다</span>
                 </p>
 
-                <p className="text-base sm:text-lg text-gray-500 max-w-2xl mx-auto px-4">
+                <p 
+                  className="text-base sm:text-lg text-gray-400 max-w-2xl mx-auto px-4"
+                  style={{
+                    fontWeight: 300,
+                    letterSpacing: '0.03em',
+                    lineHeight: '1.7'
+                  }}
+                >
                   AI 기반 실시간 정보 검색부터 자동 후처리까지<br className="hidden sm:inline" />
                   카드사 상담의 새로운 기준
                 </p>
@@ -136,7 +154,11 @@ export default function LandingPage() {
               >
                 <Button
                   onClick={() => navigate('/login')}
-                  className="bg-[#0047AB] hover:bg-[#003580] text-white px-8 sm:px-12 py-5 sm:py-6 text-sm sm:text-base font-medium rounded-xl shadow-2xl hover:shadow-[#0047AB]/50 transition-all group"
+                  className="bg-[#0047AB] hover:bg-[#003580] text-white px-8 sm:px-12 py-5 sm:py-6 text-sm sm:text-base rounded-xl shadow-2xl hover:shadow-[#0047AB]/50 transition-all group"
+                  style={{
+                    fontWeight: 500,
+                    letterSpacing: '0.05em'
+                  }}
                 >
                   시작하기
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -156,10 +178,23 @@ export default function LandingPage() {
               transition={{ duration: 0.8 }}
               className="text-center mb-16 sm:mb-24"
             >
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-light mb-6 sm:mb-8 leading-tight px-4">
-                상담 현장의 <span className="font-normal text-white">현실</span>
+              <h2 
+                className="text-3xl sm:text-4xl md:text-5xl mb-6 sm:mb-8 leading-tight px-4"
+                style={{
+                  fontWeight: 300,
+                  letterSpacing: '0.02em'
+                }}
+              >
+                상담 현장의 <span style={{ fontWeight: 500, color: 'white' }}>현실</span>
               </h2>
-              <p className="text-lg sm:text-xl text-gray-500 leading-relaxed max-w-2xl mx-auto px-4">
+              <p 
+                className="text-lg sm:text-xl text-gray-400 leading-relaxed max-w-2xl mx-auto px-4"
+                style={{
+                  fontWeight: 300,
+                  letterSpacing: '0.03em',
+                  lineHeight: '1.8'
+                }}
+              >
                 정보 검색에 소요되는 시간,<br />
                 반복되는 후처리 작업,<br />
                 그리고 낮아지는 업무 효율
@@ -175,16 +210,55 @@ export default function LandingPage() {
               className="grid grid-cols-3 gap-6 sm:gap-16 max-w-4xl mx-auto"
             >
               <div className="text-center">
-                <div className="text-3xl sm:text-5xl font-light text-gray-700 mb-2">5분+</div>
-                <div className="text-xs sm:text-sm text-gray-600">정보 검색</div>
+                <div 
+                  className="text-3xl sm:text-5xl text-gray-700 mb-2"
+                  style={{ fontWeight: 200 }}
+                >
+                  5분+
+                </div>
+                <div 
+                  className="text-xs sm:text-sm text-gray-600"
+                  style={{ 
+                    fontWeight: 400,
+                    letterSpacing: '0.05em'
+                  }}
+                >
+                  정보 검색
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl sm:text-5xl font-light text-gray-700 mb-2">10분+</div>
-                <div className="text-xs sm:text-sm text-gray-600">후처리 작업</div>
+                <div 
+                  className="text-3xl sm:text-5xl text-gray-700 mb-2"
+                  style={{ fontWeight: 200 }}
+                >
+                  10분+
+                </div>
+                <div 
+                  className="text-xs sm:text-sm text-gray-600"
+                  style={{ 
+                    fontWeight: 400,
+                    letterSpacing: '0.05em'
+                  }}
+                >
+                  후처리 작업
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl sm:text-5xl font-light text-gray-700 mb-2">반복</div>
-                <div className="text-xs sm:text-sm text-gray-600">매 상담마다</div>
+                <div 
+                  className="text-3xl sm:text-5xl text-gray-700 mb-2"
+                  style={{ fontWeight: 200 }}
+                >
+                  반복
+                </div>
+                <div 
+                  className="text-xs sm:text-sm text-gray-600"
+                  style={{ 
+                    fontWeight: 400,
+                    letterSpacing: '0.05em'
+                  }}
+                >
+                  매 상담마다
+                </div>
               </div>
             </motion.div>
           </div>
@@ -200,10 +274,23 @@ export default function LandingPage() {
               transition={{ duration: 0.8 }}
               className="text-center mb-16 sm:mb-24"
             >
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-light mb-6 sm:mb-8 leading-tight px-4">
-                <span className="font-normal text-[#0047AB]">3단계</span>로 완성되는 상담
+              <h2 
+                className="text-3xl sm:text-4xl md:text-5xl mb-6 sm:mb-8 leading-tight px-4"
+                style={{
+                  fontWeight: 300,
+                  letterSpacing: '0.02em'
+                }}
+              >
+                <span style={{ fontWeight: 500, color: '#0047AB' }}>3단계</span>로 완성되는 상담
               </h2>
-              <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto px-4">
+              <p 
+                className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto px-4"
+                style={{
+                  fontWeight: 300,
+                  letterSpacing: '0.03em',
+                  lineHeight: '1.8'
+                }}
+              >
                 전화부터 마무리까지, 끊김 없이 이어지는 워크플로우
               </p>
             </motion.div>
@@ -231,24 +318,54 @@ export default function LandingPage() {
                   
                   <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-10 p-4 sm:p-10 border-l-2 border-white/10 group-hover:border-[#0047AB] transition-colors">
                     {/* Number */}
-                    <div className="text-4xl sm:text-6xl font-light text-gray-900 group-hover:text-[#0047AB]/20 transition-colors min-w-[60px] sm:min-w-[80px]">
+                    <div 
+                      className="text-4xl sm:text-6xl text-gray-900 group-hover:text-[#0047AB]/20 transition-colors min-w-[60px] sm:min-w-[80px]"
+                      style={{ fontWeight: 200 }}
+                    >
                       {step.number}
                     </div>
 
                     {/* Content */}
                     <div className="flex-1">
-                      <div className="text-xs text-[#FBBC04] font-medium tracking-[0.2em] uppercase mb-2">
+                      <div 
+                        className="text-xs text-[#FBBC04] uppercase mb-2"
+                        style={{
+                          fontWeight: 500,
+                          letterSpacing: '0.2em'
+                        }}
+                      >
                         {step.keyword}
                       </div>
-                      <h3 className="text-xl sm:text-2xl font-normal mb-2 sm:mb-3 group-hover:text-[#0047AB] transition-colors">
+                      <h3 
+                        className="text-xl sm:text-2xl mb-2 sm:mb-3 group-hover:text-[#0047AB] transition-colors"
+                        style={{
+                          fontWeight: 400,
+                          letterSpacing: '0.02em'
+                        }}
+                      >
                         {step.title}
                       </h3>
-                      <p className="text-sm sm:text-base text-gray-500 leading-relaxed mb-2 sm:mb-3">
+                      <p 
+                        className="text-sm sm:text-base text-gray-500 leading-relaxed mb-2 sm:mb-3"
+                        style={{
+                          fontWeight: 300,
+                          letterSpacing: '0.02em',
+                          lineHeight: '1.7'
+                        }}
+                      >
                         {step.description}
                       </p>
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
                         <CheckCircle2 className="w-3.5 h-3.5 text-[#0047AB]" />
-                        <span className="text-xs text-gray-400">{step.result}</span>
+                        <span 
+                          className="text-xs text-gray-400"
+                          style={{
+                            fontWeight: 400,
+                            letterSpacing: '0.03em'
+                          }}
+                        >
+                          {step.result}
+                        </span>
                       </div>
                     </div>
 
@@ -277,10 +394,23 @@ export default function LandingPage() {
               transition={{ duration: 0.8 }}
               className="text-center mb-16 sm:mb-24"
             >
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-light mb-6 sm:mb-8 leading-tight px-4">
-                <span className="font-normal text-white">측정 가능한</span> 성과
+              <h2 
+                className="text-3xl sm:text-4xl md:text-5xl mb-6 sm:mb-8 leading-tight px-4"
+                style={{
+                  fontWeight: 300,
+                  letterSpacing: '0.02em'
+                }}
+              >
+                <span style={{ fontWeight: 500, color: 'white' }}>측정 가능한</span> 성과
               </h2>
-              <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto px-4">
+              <p 
+                className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto px-4"
+                style={{
+                  fontWeight: 300,
+                  letterSpacing: '0.03em',
+                  lineHeight: '1.8'
+                }}
+              >
                 상담 효율성의 극적인 개선
               </p>
             </motion.div>
@@ -297,27 +427,90 @@ export default function LandingPage() {
                 <div className="mb-5">
                   <Zap className="w-10 h-10 sm:w-12 sm:h-12 text-[#0047AB] mx-auto" />
                 </div>
-                <div className="text-4xl sm:text-5xl font-light text-[#0047AB] mb-3">3초</div>
-                <div className="text-sm sm:text-base text-gray-400 mb-1">정보 검색</div>
-                <div className="text-xs text-gray-600">5분 → 3초</div>
+                <div 
+                  className="text-4xl sm:text-5xl text-[#0047AB] mb-3"
+                  style={{ fontWeight: 200 }}
+                >
+                  3초
+                </div>
+                <div 
+                  className="text-sm sm:text-base text-gray-400 mb-1"
+                  style={{
+                    fontWeight: 400,
+                    letterSpacing: '0.03em'
+                  }}
+                >
+                  정보 검색
+                </div>
+                <div 
+                  className="text-xs text-gray-600"
+                  style={{
+                    fontWeight: 300,
+                    letterSpacing: '0.02em'
+                  }}
+                >
+                  5분 → 3초
+                </div>
               </div>
               
               <div className="text-center group">
                 <div className="mb-5">
                   <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12 text-[#0047AB] mx-auto" />
                 </div>
-                <div className="text-4xl sm:text-5xl font-light text-[#0047AB] mb-3">60%</div>
-                <div className="text-sm sm:text-base text-gray-400 mb-1">시간 단축</div>
-                <div className="text-xs text-gray-600">10분 → 4분</div>
+                <div 
+                  className="text-4xl sm:text-5xl text-[#0047AB] mb-3"
+                  style={{ fontWeight: 200 }}
+                >
+                  60%
+                </div>
+                <div 
+                  className="text-sm sm:text-base text-gray-400 mb-1"
+                  style={{
+                    fontWeight: 400,
+                    letterSpacing: '0.03em'
+                  }}
+                >
+                  시간 단축
+                </div>
+                <div 
+                  className="text-xs text-gray-600"
+                  style={{
+                    fontWeight: 300,
+                    letterSpacing: '0.02em'
+                  }}
+                >
+                  10분 → 4분
+                </div>
               </div>
               
               <div className="text-center group">
                 <div className="mb-5">
                   <Phone className="w-10 h-10 sm:w-12 sm:h-12 text-[#0047AB] mx-auto" />
                 </div>
-                <div className="text-4xl sm:text-5xl font-light text-[#0047AB] mb-3">99%</div>
-                <div className="text-sm sm:text-base text-gray-400 mb-1">FCR 달성</div>
-                <div className="text-xs text-gray-600">한 통화로 완료</div>
+                <div 
+                  className="text-4xl sm:text-5xl text-[#0047AB] mb-3"
+                  style={{ fontWeight: 200 }}
+                >
+                  99%
+                </div>
+                <div 
+                  className="text-sm sm:text-base text-gray-400 mb-1"
+                  style={{
+                    fontWeight: 400,
+                    letterSpacing: '0.03em'
+                  }}
+                >
+                  FCR 달성
+                </div>
+                <div 
+                  className="text-xs text-gray-600"
+                  style={{
+                    fontWeight: 300,
+                    letterSpacing: '0.02em'
+                  }}
+                >
+                  한 통화로 완료
+                </div>
               </div>
             </motion.div>
           </div>
@@ -332,20 +525,37 @@ export default function LandingPage() {
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
             >
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-light mb-6 sm:mb-8 leading-tight px-4">
+              <h2 
+                className="text-3xl sm:text-4xl md:text-5xl mb-6 sm:mb-8 leading-tight px-4"
+                style={{
+                  fontWeight: 300,
+                  letterSpacing: '0.02em',
+                  lineHeight: '1.5'
+                }}
+              >
                 상담의 품질을<br />
-                <span className="font-normal text-[#0047AB]">효율</span>로 증명하세요
+                <span style={{ fontWeight: 500, color: '#0047AB' }}>효율</span>로 증명하세요
               </h2>
               
               <Button
                 onClick={() => navigate('/login')}
-                className="bg-[#0047AB] hover:bg-[#003580] text-white px-10 sm:px-16 py-5 sm:py-7 text-base sm:text-lg font-medium rounded-xl shadow-2xl hover:shadow-[#0047AB]/50 transition-all group mb-6"
+                className="bg-[#0047AB] hover:bg-[#003580] text-white px-10 sm:px-16 py-5 sm:py-7 text-base sm:text-lg rounded-xl shadow-2xl hover:shadow-[#0047AB]/50 transition-all group mb-6"
+                style={{
+                  fontWeight: 500,
+                  letterSpacing: '0.05em'
+                }}
               >
                 시작하기
                 <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 ml-2 sm:ml-3 group-hover:translate-x-1 transition-transform" />
               </Button>
 
-              <p className="text-xs sm:text-sm text-gray-600 px-4">
+              <p 
+                className="text-xs sm:text-sm text-gray-600 px-4"
+                style={{
+                  fontWeight: 300,
+                  letterSpacing: '0.05em'
+                }}
+              >
                 카드사 상담원을 위한 AI 기반 실시간 지원 시스템
               </p>
             </motion.div>
@@ -360,11 +570,33 @@ export default function LandingPage() {
                 <Phone className="w-6 h-6 text-white" />
               </div>
               <div>
-                <div className="text-sm sm:text-base font-medium">CALL:ACT</div>
-                <div className="text-xs text-gray-600">AI 기반 실시간 상담 지원 시스템</div>
+                <div 
+                  className="text-sm sm:text-base"
+                  style={{
+                    fontWeight: 500,
+                    letterSpacing: '0.05em'
+                  }}
+                >
+                  CALL:ACT
+                </div>
+                <div 
+                  className="text-xs text-gray-600"
+                  style={{
+                    fontWeight: 300,
+                    letterSpacing: '0.03em'
+                  }}
+                >
+                  AI 기반 실시간 상담 지원 시스템
+                </div>
               </div>
             </div>
-            <div className="text-xs text-gray-600">
+            <div 
+              className="text-xs text-gray-600"
+              style={{
+                fontWeight: 300,
+                letterSpacing: '0.05em'
+              }}
+            >
               © 2025 CALL:ACT. All rights reserved.
             </div>
           </div>

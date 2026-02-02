@@ -1,4 +1,3 @@
-import { X } from 'lucide-react';
 import { useEffect } from 'react';
 
 interface AnnouncementModalProps {
@@ -15,20 +14,6 @@ interface AnnouncementModalProps {
 }
 
 export default function AnnouncementModal({ isOpen, onClose, announcement }: AnnouncementModalProps) {
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
   const getTagBgColor = (tag: string) => {
     switch (tag) {
       case '긴급':
@@ -40,38 +25,52 @@ export default function AnnouncementModal({ isOpen, onClose, announcement }: Ann
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
-      {/* Overlay */}
-      <div 
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      ></div>
+  // ⭐ ESC 키 이벤트 리스너 추가
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
 
-      {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      // 모달 열릴 때 body 스크롤 잠금
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[#E0E0E0]">
-          <button
-            onClick={onClose}
-            className="absolute right-2 sm:right-3 top-2 sm:top-3 w-7 h-7 flex items-center justify-center hover:bg-[#F5F5F5] rounded-full transition-colors"
-          >
-            <X className="w-4 h-4 text-[#999999]" />
-          </button>
-          
+        <div className="px-4 py-3 border-b border-[#E0E0E0]">
           <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold mb-1.5 ${getTagBgColor(announcement.tag)}`}>
             [{announcement.tag}]
           </span>
-          <h2 className="text-sm sm:text-base font-bold text-[#333333] mt-1 pr-8">{announcement.title}</h2>
+          <h2 className="text-base font-bold text-[#333333] mt-1">{announcement.title}</h2>
           
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-xs text-[#666666]">
+          <div className="flex items-center gap-3 mt-2 text-xs text-[#666666]">
             <span>작성자: {announcement.author || '운영팀'}</span>
             <span className="text-[#999999]">{announcement.date}</span>
           </div>
         </div>
 
         {/* Content */}
-        <div className="px-3 sm:px-4 py-3 sm:py-4 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 180px)' }}>
+        <div className="px-4 py-4 overflow-y-auto" style={{ maxHeight: 'calc(70vh - 180px)' }}>
           <div className="prose prose-sm max-w-none">
             {announcement.content ? (
               <div className="text-xs text-[#333333] leading-relaxed whitespace-pre-wrap">
@@ -100,7 +99,7 @@ export default function AnnouncementModal({ isOpen, onClose, announcement }: Ann
         </div>
 
         {/* Footer */}
-        <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-[#E0E0E0] flex justify-center">
+        <div className="px-4 py-3 border-t border-[#E0E0E0] flex justify-center">
           <button
             onClick={onClose}
             className="px-5 py-1.5 text-xs bg-[#0047AB] hover:bg-[#003580] text-white rounded-md transition-colors w-full sm:w-auto"

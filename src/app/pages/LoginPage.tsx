@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { employeesData } from '../../data/mockData';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -14,23 +15,66 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
 
-    // Mock validation
-    // 일반 사원: EMP-001 / 0000
-    // 관리자: ADMIN-001 / 0000
-    if (employeeId === 'EMP-001' && password === '0000') {
-      localStorage.setItem('userRole', 'employee');
-      localStorage.setItem('employeeId', 'EMP-001');
-      localStorage.setItem('employeeName', '홍길동');
-      localStorage.setItem('isAdmin', 'false');
-      navigate('/dashboard');
-    } else if (employeeId === 'ADMIN-001' && password === '0000') {
+    // LocalStorage에서 사원 목록 가져오기
+    const savedEmployees = localStorage.getItem('employees');
+    let employees = [];
+    
+    if (savedEmployees) {
+      try {
+        employees = JSON.parse(savedEmployees);
+        
+        // 50명 미만이면 mockData로 초기화
+        if (employees.length < 50) {
+          console.log('LoginPage: LocalStorage 데이터가 50명 미만입니다. mockData로 초기화합니다.');
+          employees = employeesData;
+          localStorage.setItem('employees', JSON.stringify(employeesData));
+        }
+      } catch (e) {
+        console.error('Failed to parse employees', e);
+        employees = employeesData;
+        localStorage.setItem('employees', JSON.stringify(employeesData));
+      }
+    } else {
+      // LocalStorage에 데이터가 없으면 mockData로 초기화
+      console.log('LoginPage: LocalStorage가 비어있습니다. mockData로 초기화합니다.');
+      employees = employeesData;
+      localStorage.setItem('employees', JSON.stringify(employeesData));
+    }
+
+    // 관리자 계정 확인 (ADMIN-001)
+    if (employeeId === 'ADMIN-001' && password === '0000') {
       localStorage.setItem('userRole', 'admin');
       localStorage.setItem('employeeId', 'ADMIN-001');
       localStorage.setItem('employeeName', '관리자');
       localStorage.setItem('isAdmin', 'true');
+      localStorage.setItem('userTeam', '관리부');
+      localStorage.setItem('userPosition', '팀장');
+      localStorage.setItem('userEmail', 'admin@teddycard.com');
+      localStorage.setItem('userPhone', '010-0000-0000');
+      localStorage.setItem('userJoinDate', '2020-01-01');
+      navigate('/dashboard');
+      return;
+    }
+
+    // 사원 계정 확인 (LocalStorage 기반)
+    const foundEmployee = employees.find((emp: any) => emp.id === employeeId);
+    
+    if (foundEmployee && password === '0000') {
+      // 최초 비밀번호는 0000으로 고정 (추후 변경 가능하도록 확장 가능)
+      const isAdminUser = foundEmployee.position === '팀장' || foundEmployee.position === '부장' || foundEmployee.position === '이사';
+      
+      localStorage.setItem('userRole', isAdminUser ? 'admin' : 'employee');
+      localStorage.setItem('employeeId', foundEmployee.id);
+      localStorage.setItem('employeeName', foundEmployee.name);
+      localStorage.setItem('isAdmin', isAdminUser.toString());
+      localStorage.setItem('userTeam', foundEmployee.team);
+      localStorage.setItem('userPosition', foundEmployee.position);
+      localStorage.setItem('userEmail', foundEmployee.email);
+      localStorage.setItem('userPhone', foundEmployee.phone);
+      localStorage.setItem('userJoinDate', foundEmployee.joinDate);
       navigate('/dashboard');
     } else if (employeeId && password) {
-      setError('입력된 정보가 올바르지 않습니다.');
+      setError('입력된 정보가 올바르지 않습니다. (기본 비밀번호: 0000)');
     } else {
       setError('사번과 비밀번호를 입력하세요.');
     }

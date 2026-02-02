@@ -150,20 +150,12 @@
 
   body {
     @apply bg-background text-foreground;
-    overflow: hidden;
-    height: 100vh;
   }
 
   /**
   * Default typography styles for HTML elements (h1-h4, p, label, button, input).
   * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
   */
-
-  html {
-    font-size: var(--font-size);
-    overflow: hidden;
-    height: 100vh;
-  }
 
   h1 {
     font-size: var(--text-2xl);
@@ -205,6 +197,166 @@
     font-size: var(--text-base);
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
+  }
+  
+  /* ⭐ 타임스탬프 이탤릭 강제 적용 */
+  em[style*="fontStyle: 'italic'"],
+  .italic,
+  [class*="italic"] {
+    font-style: italic !important;
+  }
+  
+  /* ⭐ STT 및 칸반보드 애니메이션 */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ⭐ 튜토리얼 가이드 말풍선 애니메이션 (fade-in only) */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out forwards;
+  }
+
+  @keyframes slideDownFade {
+    from {
+      opacity: 0;
+      transform: translateY(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Phase 3: 고객 정보 위→아래 애니메이션 */
+  @keyframes slideInFromTop {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Phase 3: 인입 키워드 좌→우 슬라이드 애니메이션 */
+  @keyframes slideInFromLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Phase 3.5: 칸반보드 Step 전환 우→좌 슬라이드 애니메이션 */
+  @keyframes slideInFromRight {
+    from {
+      opacity: 0;
+      transform: translateX(50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* ⭐ 부드러운 페이드인 (키워드 섹션용) */
+  @keyframes fadeInSmooth {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ⭐ 파동과 함께 호흡하는 미세한 움직임 */
+  @keyframes wave-flow {
+    0% {
+      box-shadow: 0 0 0 0 rgba(0, 71, 171, 0.3);
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.02); /* 아주 미세하게 커짐 */
+    }
+    100% {
+      box-shadow: 0 0 0 25px rgba(0, 71, 171, 0);
+      transform: scale(1);
+    }
+  }
+
+  .animate-wave-flow {
+    animation: wave-flow 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  /* ⭐ 스케일과 함께 페이드인 (개별 키워드 배지용) */
+  @keyframes fadeInScale {
+    from {
+      opacity: 0;
+      transform: scale(0.8) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* ⭐ 아래에서 위로 부드럽게 페이드인 (카드 섹션용) */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ⭐ 스크롤바 숨기기 */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+  }
+
+  /* ⭐ 텍스트 선택 가능하도록 설정 */
+  .select-text {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+  
+  .select-text * {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
   }
 }
 

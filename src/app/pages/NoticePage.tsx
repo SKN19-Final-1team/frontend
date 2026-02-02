@@ -9,23 +9,15 @@ export default function NoticePage() {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null);
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
 
-  // localStorage에서 관리자가 고정한 공지사항 불러오기
+  // localStorage에서 공지사항 불러오기 (관리자가 작성한 것 포함)
   useEffect(() => {
-    const saved = localStorage.getItem('pinnedAnnouncements');
-    if (saved) {
+    const savedNotices = localStorage.getItem('notices');
+    if (savedNotices) {
       try {
-        const pinnedAnnouncements = JSON.parse(saved);
-        if (pinnedAnnouncements.length > 0) {
-          const pinnedIds = pinnedAnnouncements.map((n: any) => n.id);
-          setNotices(prev => 
-            prev.map(notice => ({
-              ...notice,
-              pinned: pinnedIds.includes(notice.id)
-            }))
-          );
-        }
+        const parsedNotices = JSON.parse(savedNotices);
+        setNotices(parsedNotices);
       } catch (e) {
-        console.error('Failed to load pinned announcements', e);
+        console.error('Failed to load notices', e);
       }
     }
   }, []);
@@ -34,25 +26,31 @@ export default function NoticePage() {
     setSelectedAnnouncement(announcement);
     setIsAnnouncementModalOpen(true);
     
-    // 조회수 증가
-    setNotices(prev =>
-      prev.map(n =>
-        n.id === announcement.id ? { ...n, views: n.views + 1 } : n
-      )
+    // 조회수 증가 및 LocalStorage 업데이트
+    const updatedNotices = notices.map(n =>
+      n.id === announcement.id ? { ...n, views: n.views + 1 } : n
     );
+    setNotices(updatedNotices);
+    
+    // LocalStorage에 저장
+    localStorage.setItem('notices', JSON.stringify(updatedNotices));
+    
+    // 고정 공지사항도 업데이트
+    const pinnedNotices = updatedNotices.filter((n: any) => n.pinned);
+    localStorage.setItem('pinnedAnnouncements', JSON.stringify(pinnedNotices));
   };
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-60px)] flex flex-col p-3 sm:p-4 gap-3 bg-[#F5F5F5] overflow-y-auto">
+      <div className="min-h-[calc(100vh-60px)] flex flex-col p-6 gap-4 bg-[#F5F5F5] pb-20">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 flex-shrink-0">
+        <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-4 flex-shrink-0">
           <h1 className="text-base font-bold text-[#333333]">📢 공지사항</h1>
           <p className="text-[11px] text-[#666666] mt-0.5">중요한 공지사항을 확인하세요</p>
         </div>
 
         {/* Notices List - 반응형 그리드: 모바일 1열, 태블릿 2열 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-shrink-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-shrink-0">
           {notices.sort((a, b) => {
             if (a.pinned && !b.pinned) return -1;
             if (!a.pinned && b.pinned) return 1;

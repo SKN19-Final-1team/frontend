@@ -119,7 +119,7 @@ export const useVoiceRecorder = () => {
   const start = useCallback(async () => {
     try {
       // 웹소켓 연결
-      websocket.current = new WebSocket("ws://127.0.0.1:8000/api/v1/ws");
+      websocket.current = new WebSocket("ws://127.0.0.1:8000/api/v1/ws/call");
       
       websocket.current.onopen = () => setWsStatus('Connected');
       websocket.current.onclose = () => setWsStatus('Disconnected');

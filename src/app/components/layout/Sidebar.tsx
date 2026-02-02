@@ -23,8 +23,10 @@ export default function Sidebar({ isExpanded, onMouseEnter, onMouseLeave }: Side
 
   useEffect(() => {
     const role = localStorage.getItem('userRole');
-    setIsAdmin(role === 'admin');
-  }, []);
+    const adminStatus = localStorage.getItem('isAdmin') === 'true';
+    console.log('Sidebar - userRole:', role, 'isAdmin:', adminStatus);
+    setIsAdmin(adminStatus);
+  }, [location.pathname]); // location 변경 시에도 체크
 
   const menuItems = [
     { id: 'dashboard', label: '대시보드', icon: Home, path: '/dashboard', highlight: false },
