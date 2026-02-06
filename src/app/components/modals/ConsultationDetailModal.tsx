@@ -1,9 +1,10 @@
-import { Play, Pause, User, Clock, CheckCircle, FileText, Download, X } from 'lucide-react';
+import { Play, Pause, User, Clock, CheckCircle, FileText, Download, X, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useState, useRef, useEffect } from 'react';
 import { formatBirthDateWithAge } from '@/utils/age';
 import DocumentDetailModal from './DocumentDetailModal';
 import RecordingDownloadWarningModal from './RecordingDownloadWarningModal';
+import { fetchConsultationDetail, type ConsultationDetail, USE_MOCK_DATA } from '@/api/consultationApi';
 
 interface ConsultationDetailModalProps {
   isOpen: boolean;
@@ -28,10 +29,36 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(327); // 5분 27초
-  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false); // ⭐ DocumentDetailModal 상태
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null); // ⭐ 선택된 문서 ID
-  const [isRecordingDownloadWarningModalOpen, setIsRecordingDownloadWarningModalOpen] = useState(false); // ⭐ 녹취 다운로드 경고 모달 상태
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [isRecordingDownloadWarningModalOpen, setIsRecordingDownloadWarningModalOpen] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ⭐ DB에서 가져온 상세 데이터 (Real 모드에서만 사용)
+  const [detailFromDB, setDetailFromDB] = useState<ConsultationDetail | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+
+  // ⭐ 상담 상세 데이터 로드 (Real 모드에서만)
+  useEffect(() => {
+    // Mock 모드에서는 API 호출하지 않음
+    if (USE_MOCK_DATA) {
+      setDetailFromDB(null);
+      return;
+    }
+
+    if (isOpen && consultation?.id) {
+      setIsLoadingDetail(true);
+      fetchConsultationDetail(consultation.id)
+        .then((data) => {
+          setDetailFromDB(data);
+        })
+        .finally(() => {
+          setIsLoadingDetail(false);
+        });
+    } else {
+      setDetailFromDB(null);
+    }
+  }, [isOpen, consultation?.id]);
 
   // ⭐ Phase 16-1: categoryMain/categorySub 파싱 (fallback)
   const getCategoryMain = () => {
@@ -109,13 +136,17 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
 
   if (!isOpen) return null;
 
-  // Mock detailed data
-  const detailData = {
-    customerId: 'CUST-TEDDY-00001', // ⭐ Phase 10-5: 신규 형식
-    customerName: consultation.customer, // ⭐ Phase 10-5: 이름 추가
+  // ⭐ Mock 모드: 기존 하드코딩 데이터 사용
+  // ⭐ Real 모드: DB에서 가져온 데이터 사용
+  const db = detailFromDB;
+
+  // Mock 데이터 (기존 하드코딩)
+  const mockDetailData = {
+    customerId: 'CUST-TEDDY-00001',
+    customerName: consultation.customer,
     customerPhone: '010-1234-5678',
-    customerBirthDate: '1982-05-15', // ⭐ Phase 10-5: 생년월일 추가
-    customerAddress: '서울시 강남구 테헤란로 123', // ⭐ Phase 10-5: 주소 추가
+    customerBirthDate: '1982-05-15',
+    customerAddress: '서울시 강남구 테헤란로 123',
     startTime: consultation.time || '14:32:15',
     endTime: '14:37:42',
     duration: consultation.duration || '5:27',
@@ -129,22 +160,68 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
     ],
     documents: [
       {
-        id: 'card-1-1-1', // ⭐ Phase 10-6: 실제 scenarios.ts의 문서 ID 사용
+        id: 'card-1-1-1',
         title: '카드 즉시 사용 정지',
         content: '고객의 카드 분실 신고 시 즉시 카드 사용을 정지하여 부정 사용을 방지합니다.'
       },
       {
-        id: 'card-1-1-2', // ⭐ Phase 10-6: 실제 scenarios.ts의 문서 ID 사용
+        id: 'card-1-1-2',
         title: '분실 신고 접수 완료',
         content: '분실 신고가 정식으로 접수되었으며, 신고 번호가 발급됩니다.'
       },
       {
-        id: 'card-1-1-3', // ⭐ Phase 10-6: 실제 scenarios.ts의 문서 ID 사용
+        id: 'card-1-1-3',
         title: '재발급 카드 신청',
         content: '분실 카드를 대체할 새로운 카드를 발급합니다.'
       },
     ],
     satisfaction: 5,
+  };
+
+  // Real 모드: DB 데이터 기반 생성 (processing_timeline 우선 사용)
+  const getActionsFromDB = () => {
+    // 1순위: processing_timeline (처리 내역)
+    if (db?.processing_timeline && db.processing_timeline.length > 0) {
+      return db.processing_timeline.map(item => ({
+        time: item.time,
+        action: item.action,
+      }));
+    }
+    // 2순위: transcript에서 agent 메시지 추출 (fallback)
+    if (db?.transcript?.messages && db.transcript.messages.length > 0) {
+      return db.transcript.messages
+        .filter(m => m.speaker === 'agent')
+        .slice(0, 5)
+        .map(m => ({ time: m.timestamp, action: m.message }));
+    }
+    return mockDetailData.actions;
+  };
+
+  const getDocumentsFromDB = () => {
+    if (db?.referenced_documents && db.referenced_documents.length > 0) {
+      return db.referenced_documents.map((doc, idx) => ({
+        id: doc.doc_id || `doc-${idx}`,
+        title: doc.title || `참조 문서 ${idx + 1}`,
+        content: doc.doc_type || '문서',
+      }));
+    }
+    return mockDetailData.documents;
+  };
+
+  // ⭐ Mock 모드면 mockDetailData 사용, Real 모드면 DB 데이터 사용
+  const detailData = USE_MOCK_DATA ? mockDetailData : {
+    customerId: db?.customer_id || mockDetailData.customerId,
+    customerName: db?.customer_name || consultation.customer,
+    customerPhone: db?.customer_phone || mockDetailData.customerPhone,
+    customerBirthDate: db?.customer_birth_date || mockDetailData.customerBirthDate,
+    customerAddress: db?.customer_address || mockDetailData.customerAddress,
+    startTime: db?.call_time?.substring(0, 8) || consultation.time || mockDetailData.startTime,
+    endTime: db?.call_end_time?.substring(0, 8) || mockDetailData.endTime,
+    duration: db?.call_duration || consultation.duration || mockDetailData.duration,
+    summary: db?.ai_summary || consultation.memo || consultation.title || mockDetailData.summary,
+    actions: getActionsFromDB(),
+    documents: getDocumentsFromDB(),
+    satisfaction: db?.satisfaction_score || mockDetailData.satisfaction,
   };
 
   return (
@@ -197,6 +274,13 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-2.5 sm:p-3">
+          {/* 로딩 표시 (Real 모드에서만) */}
+          {!USE_MOCK_DATA && isLoadingDetail && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-[#0047AB] mr-2" />
+              <span className="text-sm text-[#666666]">상담 정보 로딩 중...</span>
+            </div>
+          )}
           {/* Basic Info Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-2 sm:mb-3">
             <div className="bg-[#F8F9FA] rounded-lg p-2.5 border border-[#E0E0E0]">

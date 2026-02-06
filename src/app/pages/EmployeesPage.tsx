@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Trophy, ChevronLeft, ChevronRight, Search, UserPlus } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { employeesData } from '../../data/mockData';
+import { employeesData } from '@/data/mock';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Pagination } from '../components/ui/Pagination';
+import { fetchEmployees, type Employee } from '@/api/employeesApi';
+import { USE_MOCK_DATA } from '@/config/mockConfig';
 
 const itemsPerPage = 20; // 페이지당 표시할 사원 수
 
@@ -17,47 +19,38 @@ export default function EmployeesPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // LocalStorage에서 사원 목록 불러오기
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ⭐ API에서 사원 목록 불러오기
   useEffect(() => {
-    const savedEmployees = localStorage.getItem('employees');
-    let employeesToUse = employeesData;
-
-    if (savedEmployees) {
+    const loadEmployees = async () => {
       try {
-        const parsedEmployees = JSON.parse(savedEmployees);
-        
-        // 50명보다 적으면 mockData로 초기화
-        if (parsedEmployees.length < 50) {
-          console.log('LocalStorage 데이터가 50명 미만입니다. mockData로 초기화합니다.');
-          employeesToUse = employeesData;
-          localStorage.setItem('employees', JSON.stringify(employeesData));
-        } else {
-          employeesToUse = parsedEmployees;
-        }
-      } catch (e) {
-        console.error('Failed to load employees', e);
-        employeesToUse = employeesData;
+        setIsLoading(true);
+        const data = await fetchEmployees(200); // 전체 사원 로드
+
+        // 팀 이름 정규화 및 기본값 설정
+        const normalizedEmployees = data.map((emp: any, index: number) => ({
+          ...emp,
+          team: (emp.team || emp.department || '').replace(/\s+/g, ''),
+          position: emp.position || emp.role || '사원',
+          rank: emp.rank || data.length - index,
+          consultations: emp.consultations || 0,
+          fcr: emp.fcr || 0,
+          avgTime: emp.avgTime || '0:00',
+          trend: emp.trend || 'same',
+        }));
+
+        setEmployees(normalizedEmployees);
+        console.log(`[EmployeesPage] ${USE_MOCK_DATA ? 'Mock' : 'Real'} 데이터 로드: ${normalizedEmployees.length}명`);
+      } catch (error) {
+        console.error('Failed to load employees:', error);
+        // 폴백: Mock 데이터 사용
+        setEmployees(employeesData);
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      // LocalStorage에 데이터가 없으면 mockData로 초기화
-      localStorage.setItem('employees', JSON.stringify(employeesData));
-    }
-
-    // 팀 이름 정규화 (띄워쓰기 제거: "상담 1팀" -> "상담1팀")
-    const normalizedEmployees = employeesToUse.map((emp: any, index: number) => ({
-      ...emp,
-      team: emp.team.replace(/\s+/g, ''), // 모든 공백 제거
-      rank: emp.rank || employeesToUse.length - index,
-      consultations: emp.consultations || 0,
-      fcr: emp.fcr || 0,
-      avgTime: emp.avgTime || '0:00',
-      trend: emp.trend || 'same',
-    }));
-
-    setEmployees(normalizedEmployees);
-    
-    // 정규화된 데이터를 다시 LocalStorage에 저장
-    localStorage.setItem('employees', JSON.stringify(normalizedEmployees));
+    };
+    loadEmployees();
   }, []);
 
   // 팀, 직급 목록 추출

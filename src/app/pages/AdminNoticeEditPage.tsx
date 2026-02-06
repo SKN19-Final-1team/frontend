@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label';
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { showSuccess, showWarning, showError } from '@/utils/toast';
+import { fetchNoticeById, updateNotice } from '@/api/noticesApi';
 
 export default function AdminNoticeEditPage() {
   const navigate = useNavigate();
@@ -19,19 +20,20 @@ export default function AdminNoticeEditPage() {
     author: '관리자',
   });
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 공지사항 불러오기
+  // ⭐ 공지사항 불러오기 (API 사용)
   useEffect(() => {
-    const savedNotices = localStorage.getItem('notices');
-    if (savedNotices) {
+    const loadNotice = async () => {
+      if (!id) return;
+
       try {
-        const notices = JSON.parse(savedNotices);
-        const notice = notices.find((n: any) => n.id === Number(id));
-        
+        const notice = await fetchNoticeById(Number(id));
+
         if (notice) {
           setFormData({
             title: notice.title,
-            tag: notice.tag,
+            tag: notice.tag as any,
             content: notice.content,
             pinned: notice.pinned || false,
             author: notice.author,
@@ -42,12 +44,17 @@ export default function AdminNoticeEditPage() {
         }
       } catch (e) {
         console.error('Failed to load notice', e);
+        showError('공지사항을 불러오는데 실패했습니다.');
+        navigate('/admin/notice');
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+    loadNotice();
   }, [id, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ⭐ 공지사항 수정 (API 사용)
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.title || !formData.content) {
@@ -55,41 +62,28 @@ export default function AdminNoticeEditPage() {
       return;
     }
 
-    // LocalStorage에서 기존 공지사항 목록 가져오기
-    const savedNotices = localStorage.getItem('notices');
-    let notices = [];
-    
-    if (savedNotices) {
-      try {
-        notices = JSON.parse(savedNotices);
-      } catch (e) {
-        console.error('Failed to parse notices', e);
+    setIsSubmitting(true);
+
+    try {
+      const result = await updateNotice(Number(id), {
+        tag: formData.tag,
+        title: formData.title,
+        content: formData.content,
+        pinned: formData.pinned,
+      });
+
+      if (result) {
+        showSuccess('공지사항이 수정되었습니다.');
+        navigate('/admin/notice');
+      } else {
+        showError('공지사항 수정에 실패했습니다.');
       }
+    } catch (error) {
+      console.error('Failed to update notice', error);
+      showError('공지사항 수정 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // 해당 공지사항 수정
-    const updatedNotices = notices.map((notice: any) => {
-      if (notice.id === Number(id)) {
-        return {
-          ...notice,
-          title: formData.title,
-          tag: formData.tag,
-          content: formData.content,
-          pinned: formData.pinned,
-          author: formData.author,
-        };
-      }
-      return notice;
-    });
-
-    localStorage.setItem('notices', JSON.stringify(updatedNotices));
-
-    // 고정 공지사항 업데이트
-    const pinnedNotices = updatedNotices.filter((n: any) => n.pinned);
-    localStorage.setItem('pinnedAnnouncements', JSON.stringify(pinnedNotices));
-
-    showSuccess('공지사항이 수정되었습니다.');
-    navigate('/admin/notice');
   };
 
   if (loading) {
@@ -211,10 +205,11 @@ export default function AdminNoticeEditPage() {
               </Button>
               <Button
                 type="submit"
-                className="flex-1 h-10 text-xs bg-[#0047AB] hover:bg-[#003580]"
+                disabled={isSubmitting}
+                className="flex-1 h-10 text-xs bg-[#0047AB] hover:bg-[#003580] disabled:opacity-50"
               >
                 <Save className="w-4 h-4 mr-2" />
-                수정 완료
+                {isSubmitting ? '수정 중...' : '수정 완료'}
               </Button>
             </div>
           </div>

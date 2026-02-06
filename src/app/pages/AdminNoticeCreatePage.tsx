@@ -6,7 +6,8 @@ import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { showSuccess, showWarning } from '@/utils/toast';
+import { showSuccess, showWarning, showError } from '@/utils/toast';
+import { createNotice } from '@/api/noticesApi';
 
 export default function AdminNoticeCreatePage() {
   const navigate = useNavigate();
@@ -18,7 +19,9 @@ export default function AdminNoticeCreatePage() {
     author: '관리자', // 실제로는 로그인한 사용자 정보
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.title || !formData.content) {
@@ -26,42 +29,30 @@ export default function AdminNoticeCreatePage() {
       return;
     }
 
-    // 새 공지사항 생성
-    const newNotice = {
-      id: Date.now(),
-      title: formData.title,
-      tag: formData.tag,
-      content: formData.content,
-      author: formData.author,
-      date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-      views: 0,
-      pinned: formData.pinned,
-    };
+    setIsSubmitting(true);
 
-    // LocalStorage에서 기존 공지사항 목록 가져오기
-    const savedNotices = localStorage.getItem('notices');
-    let notices = [];
-    
-    if (savedNotices) {
-      try {
-        notices = JSON.parse(savedNotices);
-      } catch (e) {
-        console.error('Failed to parse notices', e);
+    try {
+      // ⭐ API를 통해 DB에 공지사항 생성
+      const result = await createNotice({
+        tag: formData.tag,
+        title: formData.title,
+        content: formData.content,
+        author: formData.author,
+        pinned: formData.pinned,
+      });
+
+      if (result) {
+        showSuccess('공지사항이 등록되었습니다.');
+        navigate('/admin/notice');
+      } else {
+        showError('공지사항 등록에 실패했습니다.');
       }
+    } catch (error) {
+      console.error('Failed to create notice', error);
+      showError('공지사항 등록 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // 새 공지사항 추가
-    notices.unshift(newNotice);
-    localStorage.setItem('notices', JSON.stringify(notices));
-
-    // 고정 공지사항이면 pinnedAnnouncements도 업데이트
-    if (formData.pinned) {
-      const pinnedNotices = notices.filter((n: any) => n.pinned);
-      localStorage.setItem('pinnedAnnouncements', JSON.stringify(pinnedNotices));
-    }
-
-    showSuccess('공지사항이 등록되었습니다.');
-    navigate('/admin/notice');
   };
 
   return (
@@ -173,10 +164,11 @@ export default function AdminNoticeCreatePage() {
               </Button>
               <Button
                 type="submit"
-                className="flex-1 h-10 text-xs bg-[#0047AB] hover:bg-[#003580]"
+                disabled={isSubmitting}
+                className="flex-1 h-10 text-xs bg-[#0047AB] hover:bg-[#003580] disabled:opacity-50"
               >
                 <Save className="w-4 h-4 mr-2" />
-                공지 등록
+                {isSubmitting ? '등록 중...' : '공지 등록'}
               </Button>
             </div>
           </div>

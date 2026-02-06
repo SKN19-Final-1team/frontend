@@ -1,43 +1,49 @@
-import MainLayout from '../components/layout/MainLayout';
-import { Eye, Pin } from 'lucide-react';
+import { Search, Eye, Pin } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import MainLayout from '../components/layout/MainLayout';
 import AnnouncementModal from '../components/modals/AnnouncementModal';
-import { noticesData as initialNoticesData } from '../../data/mockData';
+import { noticesData as initialNoticesData } from '@/data/mock';
+import { fetchNotices, incrementViewCount, type Notice } from '@/api/noticesApi';
 
 export default function NoticePage() {
-  const [notices, setNotices] = useState(initialNoticesData);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null);
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
 
-  // localStorage에서 공지사항 불러오기 (관리자가 작성한 것 포함)
+  // ⭐ 공지사항 로드 (API 또는 Mock - USE_MOCK_DATA에 따라 자동 전환)
   useEffect(() => {
-    const savedNotices = localStorage.getItem('notices');
-    if (savedNotices) {
+    const loadNotices = async () => {
       try {
-        const parsedNotices = JSON.parse(savedNotices);
-        setNotices(parsedNotices);
+        setIsLoading(true);
+        const data = await fetchNotices(100); // 전체 공지사항
+        setNotices(data);
       } catch (e) {
         console.error('Failed to load notices', e);
+        setNotices(initialNoticesData); // fallback
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+    loadNotices();
   }, []);
 
-  const handleAnnouncementClick = (announcement: any) => {
+  const handleAnnouncementClick = async (announcement: any) => {
     setSelectedAnnouncement(announcement);
     setIsAnnouncementModalOpen(true);
-    
-    // 조회수 증가 및 LocalStorage 업데이트
+
+    // ⭐ 조회수 증가 - API 호출 (Real 모드) 또는 Mock 데이터 업데이트
+    const result = await incrementViewCount(announcement.id);
+
+    // UI 상태 업데이트
+    const newViewCount = result?.viewCount ?? announcement.views + 1;
     const updatedNotices = notices.map(n =>
-      n.id === announcement.id ? { ...n, views: n.views + 1 } : n
+      n.id === announcement.id ? { ...n, views: newViewCount } : n
     );
     setNotices(updatedNotices);
-    
-    // LocalStorage에 저장
-    localStorage.setItem('notices', JSON.stringify(updatedNotices));
-    
-    // 고정 공지사항도 업데이트
-    const pinnedNotices = updatedNotices.filter((n: any) => n.pinned);
-    localStorage.setItem('pinnedAnnouncements', JSON.stringify(pinnedNotices));
+
+    // selectedAnnouncement도 업데이트
+    setSelectedAnnouncement({ ...announcement, views: newViewCount });
   };
 
   return (

@@ -537,3 +537,123 @@ export const simulationsData = [
   { id: 3, title: '진상 고객 감정 전환 마스터', category: '민원 대응', difficulty: '고급', duration: '12분', icon: 'Users' as const, color: '#EA4335' },
   { id: 4, title: '크로스셀 영업 스킬 실전', category: '영업 스킬', difficulty: '중급', duration: '8분', icon: 'TrendingUp' as const, color: '#0047AB' },
 ];
+
+// ==================== 시뮬레이션 시나리오 상세 데이터 ====================
+export const simulationScenariosData = [
+  {
+    id: 'SIM-001',
+    category: '카드분실',
+    title: '카드 분실 신고 및 재발급',
+    difficulty: '초급',
+    duration: '5분',
+    description: '고객의 카드 분실 신고를 접수하고 재발급 절차를 안내하는 시나리오',
+    tags: ['카드분실', '재발급', '기본상담'],
+    completed: true,
+    score: 95,
+    locked: false
+  },
+  {
+    id: 'SIM-002',
+    category: '해외결제',
+    title: '해외 결제 차단 해제 요청',
+    difficulty: '중급',
+    duration: '7분',
+    description: '해외 여행 중 카드 결제가 차단된 고객의 문의를 처리하는 시나리오',
+    tags: ['해외결제', '차단해제', '긴급처리'],
+    completed: true,
+    score: 88,
+    locked: false
+  },
+  {
+    id: 'SIM-003',
+    category: '수수료문의',
+    title: '복잡한 수수료 환불 요청',
+    difficulty: '고급',
+    duration: '10분',
+    description: '여러 건의 수수료 환불을 요청하는 까다로운 고객 응대',
+    tags: ['수수료', '환불', '복잡처리'],
+    completed: false,
+    score: null,
+    locked: false
+  },
+  {
+    id: 'SIM-004',
+    category: '기타문의',
+    title: '진상 고객 감정 전환',
+    difficulty: '고급',
+    duration: '12분',
+    description: '화가 난 고객의 감정을 전환하고 문제를 해결하는 고난이도 시나리오',
+    tags: ['감정전환', '진상고객', '위기관리'],
+    completed: false,
+    score: null,
+    locked: true
+  },
+  {
+    id: 'SIM-005',
+    category: '포인트/혜택',
+    title: '프로모션 크로스셀 실전',
+    difficulty: '중급',
+    duration: '8분',
+    description: '상담 중 적절한 타이밍에 프로모션을 제안하는 영업 스킬 훈련',
+    tags: ['크로스셀', '프로모션', '영업'],
+    completed: false,
+    score: null,
+    locked: true
+  },
+  {
+    id: 'SIM-006',
+    category: '한도증액',
+    title: '다단계 복합 문의 처리',
+    difficulty: '고급',
+    duration: '15분',
+    description: '여러 문제가 얽힌 복잡한 상담을 효율적으로 처리하는 시나리오',
+    tags: ['복합문의', '다단계처리', '고급'],
+    completed: false,
+    score: null,
+    locked: true
+  },
+];
+
+// ==================== 시뮬레이션 최근 시도 기록 ====================
+export const recentAttemptsData = [
+  { id: 1, scenario: 'SIM-001', title: '카드 분실 신고 및 재발급', score: 95, date: '2025-01-05 14:30', duration: '4분 50초' },
+  { id: 2, scenario: 'SIM-002', title: '해외 결제 차단 해제 요청', score: 88, date: '2025-01-04 10:20', duration: '6분 35초' },
+  { id: 3, scenario: 'SIM-001', title: '카드 분실 신고 및 재발급', score: 92, date: '2025-01-03 16:10', duration: '5분 10초' },
+];
+
+// ==================== 대시보드 통계 데이터 ====================
+export const dashboardStatsData = {
+  todayCalls: 127,
+  completed: 95,
+  pending: 12,
+  incomplete: 20
+};
+
+export const weeklyGoalData = {
+  target: 500,
+  current: 389,
+  percentage: 78
+};
+
+export const teamStatsData = [
+  { team: 'A팀', calls: 142, fcr: 94, color: '#0047AB' },
+  { team: 'B팀', calls: 128, fcr: 89, color: '#34A853' },
+  { team: 'C팀', calls: 119, fcr: 91, color: '#FBBC04' },
+];
+
+// ==================== 프로필 배지 데이터 ====================
+export const badgesData = [
+  { id: 1, name: 'FCR 마스터', color: '#FBBC04' },
+  { id: 2, name: '스피드 레이서', color: '#0047AB' },
+  { id: 3, name: '감정 케어', color: '#34A853' },
+  { id: 4, name: '완벽주의자', color: '#9C27B0' },
+  { id: 5, name: '시뮬 마니아', color: '#FF6B35' },
+];
+
+export const monthlyStatsData = [
+  { label: '상담 완료', value: '127건', comparison: '팀 평균 대비 +15%', status: 'good' },
+  { label: 'FCR', value: '94%', comparison: '목표: 90%', status: 'good' },
+  { label: '평균 통화', value: '4분 32초', comparison: '팀 평균: 5분 10초', status: 'good' },
+  { label: '후처리 시간', value: '2분 15초', comparison: '목표: 3분', status: 'good' },
+  { label: '감정 전환율', value: '82%', comparison: '목표: 75%', status: 'good' },
+];

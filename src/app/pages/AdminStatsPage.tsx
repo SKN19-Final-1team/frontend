@@ -1,36 +1,86 @@
 import MainLayout from '../components/layout/MainLayout';
 import { TrendingUp, Users, Phone, Clock, CheckCircle, AlertTriangle, BarChart3 } from 'lucide-react';
-
-const stats = {
-  totalCalls: 1247,
-  totalEmployees: 45,
-  avgFCR: 93,
-  avgHandleTime: '4:45',
-  todayCallsChange: +12,
-  fcrChange: +2,
-};
-
-const teamStats = [
-  { team: '상담1팀', members: 18, calls: 542, fcr: 94, avgTime: '4:32', leader: '박철수' },
-  { team: '상담2팀', members: 15, calls: 478, fcr: 92, avgTime: '4:55', leader: '김태희' },
-  { team: '상담3팀', members: 12, calls: 227, fcr: 91, avgTime: '5:10', leader: '정민호' },
-];
-
-const dailyTrend = [
-  { date: '01-01', calls: 198, fcr: 91 },
-  { date: '01-02', calls: 215, fcr: 92 },
-  { date: '01-03', calls: 234, fcr: 93 },
-  { date: '01-04', calls: 256, fcr: 94 },
-  { date: '01-05', calls: 287, fcr: 93 },
-];
-
-const issueAlerts = [
-  { type: 'warning', message: '상담3팀 평균 처리시간 목표 초과', time: '2시간 전' },
-  { type: 'info', message: '오늘 상담 건수 전일 대비 12% 증가', time: '3시간 전' },
-  { type: 'success', message: '상담1팀 FCR 목표 달성 (94%)', time: '5시간 전' },
-];
+import { useMemo } from 'react';
+import { employeesData, consultationsData } from '@/data/mock';
 
 export default function AdminStatsPage() {
+  // ⭐ Mock 데이터에서 동적으로 통계 계산
+  const stats = useMemo(() => {
+    const totalCalls = consultationsData.length;
+    const totalEmployees = employeesData.length;
+    
+    // FCR 평균 계산
+    const avgFCR = Math.round(
+      employeesData.reduce((sum, emp) => sum + (emp.fcr || 0), 0) / employeesData.length
+    );
+    
+    // 평균 처리 시간 계산 (mm:ss 형식)
+    const avgSeconds = employeesData.reduce((sum, emp) => {
+      const [min, sec] = (emp.avgTime || '0:00').split(':').map(Number);
+      return sum + (min * 60 + sec);
+    }, 0) / employeesData.length;
+    const avgTime = `${Math.floor(avgSeconds / 60)}:${String(Math.floor(avgSeconds % 60)).padStart(2, '0')}`;
+    
+    return {
+      totalCalls,
+      totalEmployees,
+      avgFCR,
+      avgHandleTime: avgTime,
+      todayCallsChange: +12,
+      fcrChange: +2,
+    };
+  }, []);
+
+  // ⭐ 팀별 통계 동적 생성
+  const teamStats = useMemo(() => {
+    const teams = ['상담1팀', '상담2팀', '상담3팀'];
+    
+    return teams.map(teamName => {
+      const teamMembers = employeesData.filter(emp => emp.team === teamName);
+      const members = teamMembers.length;
+      
+      // 팀 상담 건수 (가중 계산)
+      const calls = teamMembers.reduce((sum, emp) => sum + (emp.consultations || 0), 0);
+      
+      // 팀 평균 FCR
+      const fcr = members > 0
+        ? Math.round(teamMembers.reduce((sum, emp) => sum + (emp.fcr || 0), 0) / members)
+        : 0;
+      
+      // 팀 평균 처리 시간
+      const avgSeconds = teamMembers.reduce((sum, emp) => {
+        const [min, sec] = (emp.avgTime || '0:00').split(':').map(Number);
+        return sum + (min * 60 + sec);
+      }, 0) / (members || 1);
+      const avgTime = `${Math.floor(avgSeconds / 60)}:${String(Math.floor(avgSeconds % 60)).padStart(2, '0')}`;
+      
+      // 팀장 찾기 (position이 '팀장'인 사람)
+      const leader = teamMembers.find(emp => emp.position === '팀장')?.name || '미정';
+      
+      return { team: teamName, members, calls, fcr, avgTime, leader };
+    });
+  }, []);
+
+  // ⭐ 주간 추이 데이터 (실제로는 API에서 가져와야 하지만 Mock으로 생성)
+  const dailyTrend = useMemo(() => {
+    return [
+      { date: '01-01', calls: 198, fcr: 91 },
+      { date: '01-02', calls: 215, fcr: 92 },
+      { date: '01-03', calls: 234, fcr: 93 },
+      { date: '01-04', calls: 256, fcr: 94 },
+      { date: '01-05', calls: 287, fcr: 93 },
+    ];
+  }, []);
+
+  // ⭐ 알림 데이터
+  const issueAlerts = useMemo(() => {
+    return [
+      { type: 'warning', message: '상담3팀 평균 처리시간 목표 초과', time: '2시간 전' },
+      { type: 'info', message: '오늘 상담 건수 전일 대비 12% 증가', time: '3시간 전' },
+      { type: 'success', message: '상담1팀 FCR 목표 달성 (94%)', time: '5시간 전' },
+    ];
+  }, []);
+
   const maxCalls = Math.max(...dailyTrend.map(d => d.calls));
 
   return (

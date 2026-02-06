@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { X, FileText } from 'lucide-react';
 import { scenarios, type DocumentType } from '@/data/scenarios';
-import { searchMockData } from '@/data/searchMockData';
+import { searchMockData } from '@/data/mock';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { convertToMarkdown } from '@/utils/textFormatter';
@@ -121,7 +121,7 @@ export default function DocumentDetailModal({ isOpen, onClose, documentId }: Doc
   // ⭐ ESC 키 이벤트 리스너 추가
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if ((e.key === 'Escape' || e.key === 'Enter') && isOpen) {
         e.stopPropagation();  // ⭐ 이벤트 전파 중단 (상위 모달로 전달 방지)
         onClose();
       }
@@ -153,7 +153,7 @@ export default function DocumentDetailModal({ isOpen, onClose, documentId }: Doc
 
   return (
     <div 
-      className="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-[60]"
+      className="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-[90]"
       onMouseDown={handleBackdropMouseDown}
     >
       <div 

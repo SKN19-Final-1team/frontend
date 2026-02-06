@@ -1,90 +1,13 @@
-import MainLayout from '../components/layout/MainLayout';
-import { Play, Lock, Star, Clock, Trophy, BookOpen, Award, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Clock, TrendingUp, Target, Shield, Users, Star, ChevronLeft, ChevronRight, Award, BookOpen, Lock, Trophy } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useState, useEffect } from 'react';
-import { consultationsData } from '../../data/mockData';
+import { consultationsData, simulationScenariosData, recentAttemptsData } from '@/data/mock';
 import { useNavigate } from 'react-router-dom';
+import MainLayout from '../components/layout/MainLayout';
 
-const scenarios = [
-  {
-    id: 'SIM-001',
-    category: '카드분실',
-    title: '카드 분실 신고 및 재발급',
-    difficulty: '초급',
-    duration: '5분',
-    description: '고객의 카드 분실 신고를 접수하고 재발급 절차를 안내하는 시나리오',
-    tags: ['카드분실', '재발급', '기본상담'],
-    completed: true,
-    score: 95,
-    locked: false
-  },
-  {
-    id: 'SIM-002',
-    category: '해외결제',
-    title: '해외 결제 차단 해제 요청',
-    difficulty: '중급',
-    duration: '7분',
-    description: '해외 여행 중 카드 결제가 차단된 고객의 문의를 처리하는 시나리오',
-    tags: ['해외결제', '차단해제', '긴급처리'],
-    completed: true,
-    score: 88,
-    locked: false
-  },
-  {
-    id: 'SIM-003',
-    category: '수수료문의',
-    title: '복잡한 수수료 환불 요청',
-    difficulty: '고급',
-    duration: '10분',
-    description: '여러 건의 수수료 환 요청하는 까다로운 고객 응대',
-    tags: ['수수료', '환불', '복잡처리'],
-    completed: false,
-    score: null,
-    locked: false
-  },
-  {
-    id: 'SIM-004',
-    category: '기타문의',
-    title: '진상 고객 감정 전환',
-    difficulty: '고급',
-    duration: '12분',
-    description: '화가 난 고객의 감정을 전환하고 문제를 해결하는 고난이도 시나리오',
-    tags: ['감정전환', '진상고객', '위기관리'],
-    completed: false,
-    score: null,
-    locked: true
-  },
-  {
-    id: 'SIM-005',
-    category: '포인트/혜택',
-    title: '프로모션 크로스셀 실전',
-    difficulty: '중급',
-    duration: '8분',
-    description: '상담 중 적절한 타이밍에 프로모션을 제안하는 영업 스킬 훈련',
-    tags: ['크로스셀', '프로모션', '영업'],
-    completed: false,
-    score: null,
-    locked: true
-  },
-  {
-    id: 'SIM-006',
-    category: '한도증액',
-    title: '다단계 복합 문의 처리',
-    difficulty: '고급',
-    duration: '15분',
-    description: '여러 문제가 얽힌 복잡한 상담을 효율적으로 처리하는 시나리오',
-    tags: ['복합문의', '다단계처리', '고급'],
-    completed: false,
-    score: null,
-    locked: true
-  },
-];
-
-const recentAttempts = [
-  { id: 1, scenario: 'SIM-001', title: '카드 분실 신고 및 재발급', score: 95, date: '2025-01-05 14:30', duration: '4분 50초' },
-  { id: 2, scenario: 'SIM-002', title: '해외 결제 차단 해제 요청', score: 88, date: '2025-01-04 10:20', duration: '6분 35초' },
-  { id: 3, scenario: 'SIM-001', title: '카드 분실 신고 및 재발급', score: 92, date: '2025-01-03 16:10', duration: '5분 10초' },
-];
+// ⭐ Mock 데이터에서 가져오기
+const scenarios = simulationScenariosData;
+const recentAttempts = recentAttemptsData;
 
 export default function SimulationPage() {
   const navigate = useNavigate();

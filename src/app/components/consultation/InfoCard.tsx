@@ -11,6 +11,7 @@ export type CardSource = 'ai-recommend' | 'search-result' | 'next-step';
 interface InfoCardProps {
   card: ScenarioCard;
   stepNumber?: number; // AI 추천 카드만 사용
+  searchNumber?: number; // 검색 결과 카드만 사용 (검색결과1, 검색결과2...)
   source: CardSource;
   onDetailClick: () => void;
   className?: string;
@@ -59,7 +60,7 @@ const formatRelativeTime = (timestamp?: string): string | null => {
  * - 검색 결과 카드 (검색 결과 배지, 보라색 테두리)
  * - 다음 단계 예상 카드 (노란색 테두리)
  */
-export const InfoCard = ({ card, stepNumber, source, onDetailClick, className = '', style }: InfoCardProps) => {
+export const InfoCard = ({ card, stepNumber, searchNumber, source, onDetailClick, className = '', style }: InfoCardProps) => {
   // 타임스탬프를 현재 시각 기준으로 실시간 계산
   const [relativeTime, setRelativeTime] = useState<string | null>(
     card.timestamp ? formatRelativeTime(card.timestamp) : card.displayTime || null
@@ -88,7 +89,7 @@ export const InfoCard = ({ card, stepNumber, source, onDetailClick, className = 
       case 'ai-recommend':
         return 'bg-gradient-to-br from-white to-[#F8FBFF] border-2 border-[#0047AB]/20 hover:border-[#0047AB]/40';
       case 'search-result':
-        return 'bg-white border-2 border-[#C4B5FD] hover:border-[#7C3AED] shadow-[0_2px_8px_rgba(124,58,237,0.1)] hover:shadow-[0_4px_16px_rgba(124,58,237,0.15)]';
+        return 'bg-white border-2 border-[#6366F1] hover:border-[#4F46E5] shadow-[0_2px_8px_rgba(99,102,241,0.1)] hover:shadow-[0_4px_16px_rgba(79,70,229,0.15)]';
       case 'next-step':
         return 'bg-gradient-to-br from-white to-[#FFFBF0] border-2 border-[#FDB022]/20 hover:border-[#FDB022]/40';
       default:
@@ -106,8 +107,8 @@ export const InfoCard = ({ card, stepNumber, source, onDetailClick, className = 
         };
       case 'search-result':
         return {
-          text: '검색 결과',
-          className: 'bg-[#7C3AED] text-white'
+          text: searchNumber ? `검색 결과 ${searchNumber}` : '검색 결과',
+          className: 'bg-[#4F46E5] text-white'
         };
       case 'next-step':
         return {
@@ -123,7 +124,7 @@ export const InfoCard = ({ card, stepNumber, source, onDetailClick, className = 
 
   return (
     <div
-      className={`${getCardStyle()} rounded-lg p-3 shadow-md hover:shadow-xl transition-all flex flex-col ${className}`}
+      className={`${getCardStyle()} rounded-lg p-3 shadow-md hover:shadow-xl transition-all flex flex-col h-[340px] overflow-y-auto ${className}`}
       style={style}
       onDoubleClick={onDetailClick} // ⭐ 더블클릭으로 자세히 보기
     >
@@ -143,7 +144,7 @@ export const InfoCard = ({ card, stepNumber, source, onDetailClick, className = 
 
       {/* 제목 */}
       <h3 className={`text-base font-bold mb-2.5 ${
-        source === 'search-result' ? 'text-[#7C3AED]' : 'text-[#0047AB]'
+        source === 'search-result' ? 'text-[#4F46E5]' : 'text-[#0047AB]'
       }`}>
         {card.title}
       </h3>
@@ -155,7 +156,7 @@ export const InfoCard = ({ card, stepNumber, source, onDetailClick, className = 
             key={index}
             className={`text-[11px] px-2 py-0.5 rounded font-medium ${
               source === 'search-result'
-                ? 'bg-[#F3E8FF] text-[#7C3AED]'
+                ? 'bg-[#EEF2FF] text-[#4F46E5]'
                 : 'bg-[#E8F1FC] text-[#0047AB]'
             }`}
           >
@@ -229,7 +230,7 @@ export const InfoCard = ({ card, stepNumber, source, onDetailClick, className = 
           onClick={onDetailClick}
           className={`text-[10px] font-semibold flex items-center gap-1 px-2 py-1 rounded transition-colors ${
             source === 'search-result'
-              ? 'text-[#7C3AED] hover:bg-[#F3E8FF]'
+              ? 'text-[#4F46E5] hover:bg-[#EEF2FF]'
               : 'text-[#0047AB] hover:bg-[#E8F1FC]'
           }`}
         >
