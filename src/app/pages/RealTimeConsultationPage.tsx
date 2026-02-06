@@ -380,17 +380,24 @@ export default function RealTimeConsultationPage() {
   const [ragCurrentCards, setRagCurrentCards] = useState<RAGCard[]>([]);
   const [ragNextCards, setRagNextCards] = useState<RAGCard[]>([]);
   const [ragGuidanceScript, setRagGuidanceScript] = useState<string>('');
+  // ⭐ [v25] RAG Step 기반 카드 히스토리 (각 RAG 응답 = 1 Step)
+  const [ragSteps, setRagSteps] = useState<Array<{ currentCards: RAGCard[]; nextCards: RAGCard[] }>>([]);
 
   // ⭐ [v23] RAGCard → ScenarioCard 변환 함수
   const convertRagToScenarioCard = useCallback((ragCard: RAGCard, index: number): ScenarioCard => {
-    // ⭐ documentType 추론 (테이블 또는 제목 기반)
+    // ⭐ documentType 추론 (백엔드 documentType 우선, 이전 호환 폴백)
     const inferDocumentType = (): 'terms' | 'product-spec' | 'guide' | 'general' | undefined => {
       const raw = ragCard as Record<string, unknown>;
+      // [v25] 백엔드에서 보내는 documentType 우선 사용
+      const backendDocType = raw.documentType as string;
+      if (backendDocType === 'product-spec' || backendDocType === 'guide' || backendDocType === 'terms') {
+        return backendDocType;
+      }
+      // 폴백: 테이블/제목 기반 추론
       const table = String(raw.table || raw.source_table || '');
       const title = String(ragCard.title || '').toLowerCase();
       const id = String(ragCard.id || '').toLowerCase();
 
-      // 테이블 기반 추론
       if (table === 'card_products' || id.startsWith('card-')) {
         return 'product-spec';
       }
@@ -403,19 +410,22 @@ export default function RealTimeConsultationPage() {
       return 'general';
     };
 
+    const raw = ragCard as Record<string, unknown>;
+
     return {
       id: ragCard.id || `rag-${Date.now()}-${index}`,
       title: ragCard.title || '정보 카드',
       keywords: ragCard.keywords || [],
       content: ragCard.content || '',
-      systemPath: (ragCard as Record<string, unknown>).systemPath as string || '',
-      requiredChecks: (ragCard as Record<string, unknown>).requiredChecks as string[] || [],
-      exceptions: (ragCard as Record<string, unknown>).exceptions as string[] || [],
-      time: (ragCard as Record<string, unknown>).time as string || '약 1분',
-      note: (ragCard as Record<string, unknown>).note as string || '',
-      regulation: (ragCard as Record<string, unknown>).regulation as string || '',
-      fullText: (ragCard as Record<string, unknown>).detailContent as string || ragCard.content || '',
-      relevanceScore: (ragCard as Record<string, unknown>).relevanceScore as number || 0,
+      systemPath: raw.systemPath as string || '',
+      requiredChecks: (Array.isArray(raw.requiredChecks) ? raw.requiredChecks : []) as string[],
+      exceptions: (Array.isArray(raw.exceptions) ? raw.exceptions : []) as string[],
+      time: raw.time as string || '약 1분',
+      note: raw.note as string || '',
+      regulation: raw.regulation as string || '',
+      // [v25] fullText: 백엔드가 보내는 fullText 우선, 이전 호환 detailContent 폴백
+      fullText: raw.fullText as string || raw.detailContent as string || ragCard.content || '',
+      relevanceScore: raw.relevanceScore as number || 0,
       timestamp: new Date().toISOString(),
       displayTime: `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')} (방금 전)`,
       documentType: inferDocumentType(), // ⭐ 5가지 카드 타입별 디자인 적용
@@ -424,6 +434,10 @@ export default function RealTimeConsultationPage() {
 
   // ⭐ [v24] STT 결과 수신 핸들러 (startTimestamp는 아래에서 정의되므로 ref 사용)
   const startTimestampRef = useRef<number>(0);
+  const wasCallActiveRef = useRef<boolean>(false); // ⭐ [v25] 통화 종료 전환 감지용
+  const simulationSessionIdRef = useRef<string | null>(null); // ⭐ [v25] 시뮬레이션 세션 ID
+  const wsConnectedRef = useRef<boolean>(false); // ⭐ [v25] WebSocket 연결 상태 추적
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null); // ⭐ [v25] TTS 오디오 재생용
 
   const handleSttResult = useCallback((text: string) => {
     console.log('[STT] 음성 인식 결과:', text);
@@ -434,22 +448,36 @@ export default function RealTimeConsultationPage() {
     // STT 텍스트를 단어 단위로 분리하여 표시
     const words = text.split(/\s+/).filter(w => w.length > 0);
 
-    // 키워드 감지 (모든 카테고리에서)
+    // 키워드 감지 (모든 카테고리에서) + 매칭된 키워드 수집
     const allKeywords = Object.values(incomingKeywordsByCase).flat();
-    const newTexts = words.map(word => ({
-      text: word + ' ',
-      isKeyword: allKeywords.some(kw => word.includes(kw) || kw.includes(word)),
-      speaker: 'customer' as const,
-    }));
+    const matchedKeywords: string[] = [];
+    const newTexts = words.map(word => {
+      const matched = allKeywords.find(kw => word.includes(kw) || kw.includes(word));
+      if (matched) matchedKeywords.push(matched);
+      return {
+        text: word + ' ',
+        isKeyword: !!matched,
+        speaker: 'agent' as const,
+      };
+    });
 
     setSttTexts(prev => [...prev, ...newTexts]);
 
-    // STT 전문에도 추가
+    // ⭐ [v25] STT에서 감지된 키워드를 displayedKeywords에 반영
+    if (matchedKeywords.length > 0) {
+      setDisplayedKeywords(prev => {
+        const combined = [...new Set([...prev, ...matchedKeywords])];
+        return combined.slice(0, 3);
+      });
+      setIsExtractingKeywords(false);
+    }
+
+    // STT 전문에도 추가 (상담사 마이크 → agent)
     const currentTimestamp = startTimestampRef.current || Date.now();
     setSttTranscript(prev => [
       ...prev,
       {
-        speaker: 'customer',
+        speaker: 'agent',
         message: text,
         timestamp: Math.floor((Date.now() - currentTimestamp) / 1000),
       }
@@ -463,23 +491,39 @@ export default function RealTimeConsultationPage() {
     // ⭐ RAG 결과 수신 시 로딩 인디케이터 해제
     setIsAnalyzing(false);
 
+    const hasCurrentCards = data.currentSituation && data.currentSituation.length > 0;
+    const hasNextCards = data.nextStep && data.nextStep.length > 0;
+
     // 현재 상황 카드 업데이트 (최대 4개 유지)
-    if (data.currentSituation && data.currentSituation.length > 0) {
+    if (hasCurrentCards) {
       setRagCurrentCards(prev => {
         const newCards = [...prev, ...data.currentSituation];
         return newCards.slice(-4); // 최신 4개만 유지
       });
-      // 칸반보드 표시
-      setIsKeywordDetected(true);
-      setShowNextStepCards(true);
     }
 
     // 다음 단계 카드 업데이트 (최대 4개 유지)
-    if (data.nextStep && data.nextStep.length > 0) {
+    if (hasNextCards) {
       setRagNextCards(prev => {
         const newCards = [...prev, ...data.nextStep];
         return newCards.slice(-4);
       });
+    }
+
+    // ⭐ [v25] RAG Step 기반 카드 히스토리 + 칸반보드 표시
+    if (hasCurrentCards || hasNextCards) {
+      // 새 RAG 응답을 하나의 Step으로 저장
+      setRagSteps(prev => [...prev, {
+        currentCards: data.currentSituation || [],
+        nextCards: data.nextStep || [],
+      }]);
+
+      // Step 진행 (대기콜 시나리오와 동일한 UX)
+      setCurrentStep(prev => prev + 1);
+      setMaxReachedStep(prev => prev + 1);
+
+      setIsKeywordDetected(true);
+      setShowNextStepCards(true);
     }
 
     // 안내 스크립트 업데이트
@@ -510,11 +554,75 @@ export default function RealTimeConsultationPage() {
     }
   }, []);
 
-  const { start: startRecording, stop: stopRecording, wsStatus, sessionId } = useVoiceRecorder({
+  // ⭐ [v25] AI 고객 응답 수신 핸들러 (교육 모드 TTS)
+  const handleCustomerResponse = useCallback((data: { text: string; turn_number: number; audio_url?: string }) => {
+    console.log('[교육] AI 고객 응답:', data.text);
+
+    // 1. STT 텍스트 영역에 고객 발화로 표시
+    const words = data.text.split(/\s+/).filter(w => w.length > 0);
+    const newTexts = words.map(word => ({
+      text: word + ' ',
+      isKeyword: false,
+      speaker: 'customer' as const,
+    }));
+    setSttTexts(prev => [...prev, ...newTexts]);
+
+    // 2. 상담 전문에 추가
+    const currentTimestamp = startTimestampRef.current || Date.now();
+    setSttTranscript(prev => [...prev, {
+      speaker: 'customer',
+      message: data.text,
+      timestamp: Math.floor((Date.now() - currentTimestamp) / 1000),
+    }]);
+
+    // 3. TTS 오디오 재생
+    if (data.audio_url) {
+      // 이전 오디오 정지
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current = null;
+      }
+      const audio = new Audio(`http://127.0.0.1:8000${data.audio_url}`);
+      ttsAudioRef.current = audio;
+      audio.play().catch(err => console.error('[TTS] 재생 실패:', err));
+    }
+  }, []);
+
+  // ⭐ [v25] sendMessage를 ref로 보관 (hook 반환값의 순환참조 방지)
+  const sendMessageRef = useRef<((data: Record<string, unknown>) => void) | null>(null);
+
+  // ⭐ [v25] WebSocket 연결 완료 → 시뮬레이션 초기화 시도
+  const trySendInitSimulation = useCallback(() => {
+    if (simulationSessionIdRef.current && wsConnectedRef.current && sendMessageRef.current) {
+      sendMessageRef.current({
+        type: 'init_simulation',
+        simulation_session_id: simulationSessionIdRef.current,
+      });
+      console.log('🎓 [교육] init_simulation 전송:', simulationSessionIdRef.current);
+    }
+  }, []);
+
+  // ⭐ [v25] 교육 모드: ws/edu, 실전 모드: ws/call
+  const wsEndpoint = isSimulationMode
+    ? "ws://127.0.0.1:8000/api/v1/ws/edu"
+    : "ws://127.0.0.1:8000/api/v1/ws/call";
+
+  const { start: startRecording, stop: stopRecording, sendMessage, wsStatus, sessionId } = useVoiceRecorder({
     onRagResult: handleRagResult,
     onSttResult: handleSttResult,  // ⭐ [v24] STT 결과 콜백 연결
+    onCustomerResponse: handleCustomerResponse,  // ⭐ [v25] AI 고객 응답 (TTS)
+    onConnected: (wsSessionId) => {
+      console.log('[WebSocket] 교육 WebSocket 연결 확인:', wsSessionId);
+      wsConnectedRef.current = true;
+      // WebSocket 연결 후 init_simulation 시도 (API가 먼저 완료된 경우)
+      trySendInitSimulation();
+    },
     onSessionId: (id) => console.log('[WebSocket] 세션 연결:', id),
+    wsEndpoint,  // ⭐ [v25] 교육/실전 모드별 엔드포인트
   });
+
+  // ⭐ [v25] sendMessage ref 업데이트 (onConnected 콜백에서 사용)
+  sendMessageRef.current = sendMessage;
 
   const [incomingKeywords, setIncomingKeywords] = useState<string[]>(() => {
     const activeCallState = localStorage.getItem('activeCallState');
@@ -1216,48 +1324,20 @@ export default function RealTimeConsultationPage() {
   useEffect(() => {
     let ws: WebSocket | null = null;
   
-    // ⭐ 다이렉트 인입: 백엔드 WebSocket STT 연동 (미래 구현)
+    // ⭐ 다이렉트 인입: useVoiceRecorder 훅의 startRecording()으로 WebSocket 연결됨 (line 1724)
     if (isCallActive && isDirectIncoming) {
-      console.log('🔌 [다이렉트 인입] 백엔드 STT WebSocket 연결 대기...');
-      
-      // TODO: 백엔드 WebSocket STT 연동 구현
-      // 예시 코드:
-      // ws = new WebSocket(`${process.env.REACT_APP_WS_URL}/stt`);
-      // 
-      // ws.onopen = () => {
-      //   console.log('✅ STT WebSocket 연결 성공');
-      // };
-      // 
-      // ws.onmessage = (event) => {
-      //   const data = JSON.parse(event.data);
-      //   // STT 텍스트 실시간 추가
-      //   setSttTexts(prev => [...prev, { 
-      //     text: data.text, 
-      //     isKeyword: data.isKeyword 
-      //   }]);
-      //   
-      //   // 키워드 감지 시 처리
-      //   if (data.isKeyword) {
-      //     setIsKeywordDetected(true);
-      //   }
-      // };
-      // 
-      // ws.onerror = (error) => {
-      //   console.error('❌ STT WebSocket 오류:', error);
-      // };
-      // 
-      // ws.onclose = () => {
-      //   console.log('🔌 STT WebSocket 연결 종료');
-      // };
+      console.log('🔌 [다이렉트 인입] WebSocket STT+RAG 연결됨 (useVoiceRecorder)');
     }
     
     // ⭐ 통화 종료 시: 모든 상태 초기화
-    else if (!isCallActive) {
+    // ⭐ [v25] wasCallActiveRef로 "통화 종료 전환" 시에만 초기화 (대기 중 반복 실행 방지)
+    else if (!isCallActive && wasCallActiveRef.current) {
+      wasCallActiveRef.current = false;
       setSttTexts([]);
       setIsAnalyzing(false);
       setIsKeywordDetected(false);
       setShowNextStepCards(false);
-      
+
       // Phase 3: 시나리오 관련 초기화
       setShowCustomerInfo(false);
       setShowRecentConsultations(false);
@@ -1267,9 +1347,10 @@ export default function RealTimeConsultationPage() {
       setCurrentStep(0);
       setPreviousStep(0);
       setMaxReachedStep(0);
+      setRagSteps([]); // ⭐ [v25] RAG Step 히스토리 초기화
       displayedSttIndexRef.current = 0;
       setIsDirectIncoming(false);
-      
+
       // ⭐ 검색 레이어 관련 초기화
       setConsultationReferences([]); // 참조 문서 초기화
       setSearchResults([]); // 검색 레이어 초기화
@@ -1718,10 +1799,40 @@ export default function RealTimeConsultationPage() {
     setRagCurrentCards([]);
     setRagNextCards([]);
     setRagGuidanceScript('');
+    setRagSteps([]); // ⭐ [v25] RAG Step 히스토리 초기화
 
     // 상태 초기화
     setIsCallActive(true);
+    wasCallActiveRef.current = true; // ⭐ [v25] 통화 활성 추적
+    wsConnectedRef.current = false; // ⭐ [v25] 연결 상태 초기화
+    simulationSessionIdRef.current = null; // ⭐ [v25] 시뮬레이션 세션 초기화
     startRecording(); // ⭐ 웹소켓 녹음 시작
+
+    // ⭐ [v25] 교육 모드: 시뮬레이션 시작 API 호출 (TTS + AI 고객 활성화)
+    if (isSimulationMode) {
+      const educationType = sessionStorage.getItem('educationType') || 'basic';
+      const educationCategory = sessionStorage.getItem('educationCategory') || '분실/도난';
+      const difficulty = educationType === 'advanced' ? 'advanced' : 'beginner';
+
+      console.log('🎓 [교육] 시뮬레이션 시작 API 호출:', { category: educationCategory, difficulty });
+
+      fetch('http://127.0.0.1:8000/api/v1/education/simulation/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: educationCategory, difficulty }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          simulationSessionIdRef.current = data.session_id;
+          console.log('🎓 [교육] 시뮬레이션 세션 생성:', data.session_id, '고객:', data.customer_name);
+          // WebSocket이 이미 연결되어 있으면 init_simulation 전송
+          trySendInitSimulation();
+        })
+        .catch(err => {
+          console.error('🎓 [교육] 시뮬레이션 시작 실패:', err);
+        });
+    }
+
     setIsIncomingCall(false);
     setCallTime(0);
     setConsultationStartTime(''); // ⭐ 이전 시간 초기화
@@ -1858,43 +1969,49 @@ export default function RealTimeConsultationPage() {
     
     const threshold = 100; // 100px 이상 드래그하면 Step 전환
     
-    if (Math.abs(dragDistanceRef.current) > threshold && activeScenario) {
+    const hasStepNavigation = activeScenario || ragSteps.length > 0;
+
+    if (Math.abs(dragDistanceRef.current) > threshold && hasStepNavigation) {
       // 우→좌 드래그 (dragDistance > 0): 이전 Step으로 이동
       if (dragDistanceRef.current > 0 && currentStep > 1) {
         setPreviousStep(currentStep);
         setCurrentStep(currentStep - 1);
-        
-        // 이전 Step으로 이동 시 키워��는 즉시 전체 표시 (애니메이션 스킵)
-        const prevStepData = activeScenario.steps[currentStep - 2]; // currentStep은 아직 업데이트 안됨
-        if (prevStepData) {
-          const prevStepKeywords = prevStepData.keywords.map(k => k.text);
-          setIncomingKeywords(prevStepKeywords);
-          setDisplayedKeywords(prevStepKeywords); // 즉시 전체 표시
-          setIsExtractingKeywords(false); // 추출 완료 상태
+
+        // 시나리오 모드: 이전 Step 키워드 즉시 표시
+        if (activeScenario) {
+          const prevStepData = activeScenario.steps[currentStep - 2];
+          if (prevStepData) {
+            const prevStepKeywords = prevStepData.keywords.map(k => k.text);
+            setIncomingKeywords(prevStepKeywords);
+            setDisplayedKeywords(prevStepKeywords);
+            setIsExtractingKeywords(false);
+          }
         }
-      } 
+      }
       // 좌→우 드래그 (dragDistance < 0): 다음 Step으로 이동 (이미 도달한 Step까지만)
       else if (dragDistanceRef.current < 0 && currentStep < maxReachedStep) {
         setPreviousStep(currentStep);
         setCurrentStep(currentStep + 1);
-        
-        // 이미 도달한 Step으로 이동하므로 키워드 즉시 전체 표시
-        const nextStepData = activeScenario.steps[currentStep]; // currentStep은 아직 업데이트 안됨
-        if (nextStepData) {
-          const nextStepKeywords = nextStepData.keywords.map(k => k.text);
-          setIncomingKeywords(nextStepKeywords);
-          setDisplayedKeywords(nextStepKeywords); // 즉시 전체 표시
-          setIsExtractingKeywords(false); // 추출 완료 상태
+
+        // 시나리오 모드: 다음 Step 키워드 즉시 표시
+        if (activeScenario) {
+          const nextStepData = activeScenario.steps[currentStep];
+          if (nextStepData) {
+            const nextStepKeywords = nextStepData.keywords.map(k => k.text);
+            setIncomingKeywords(nextStepKeywords);
+            setDisplayedKeywords(nextStepKeywords);
+            setIsExtractingKeywords(false);
+          }
         }
       }
     }
-    
+
     dragDistanceRef.current = 0;
   };
 
   // ⭐ Progress bar 클릭 핸들러
   const handleProgressClick = (stepIndex: number) => {
-    if (!activeScenario) return;
+    if (!activeScenario && ragSteps.length === 0) return;
     
     const targetStep = stepIndex + 1; // stepIndex는 0부터 시작, currentStep은 1부터 시작
     
@@ -1908,7 +2025,8 @@ export default function RealTimeConsultationPage() {
     setPreviousStep(currentStep);
     setCurrentStep(targetStep);
     
-    // 이미 도달한 Step이므로 키워드는 즉시 전체 표시 (애니메이션 스킵)
+    // 시나리오 모드: 이미 도달한 Step 키워드 즉시 전체 표시
+    if (!activeScenario) return; // RAG 모드는 키워드 업데이트 불필요
     const targetStepData = activeScenario.steps[stepIndex];
     if (targetStepData) {
       const targetStepKeywords = targetStepData.keywords.map(k => k.text);
@@ -1979,35 +2097,22 @@ export default function RealTimeConsultationPage() {
       });
     });
 
-    // ⭐ [v24] RAG 실시간 카드도 참조 문서로 추가 (시나리오 없는 다이렉트 콜 모드)
-    if (!activeScenario) {
-      // 현재 상황 정보 카드 (상단)
-      ragCurrentCards.forEach((ragCard, index) => {
-        const docId = ragCard.id || `RAG-CURRENT-${index}`;
-        if (!referencedDocs.some(doc => doc.documentId === docId)) {
-          referencedDocs.push({
-            stepNumber: 0,
-            documentId: docId,
-            title: ragCard.title || docId,  // title 없으면 documentId 사용
-            used: true
-          });
-        }
+    // ⭐ [v25] RAG Step 기반 참조 문서 추가 (각 Step별 카드를 stepNumber와 함께 저장)
+    if (!activeScenario && ragSteps.length > 0) {
+      ragSteps.forEach((step, stepIndex) => {
+        [...step.currentCards, ...step.nextCards].forEach((ragCard, cardIndex) => {
+          const docId = ragCard.id || `RAG-STEP${stepIndex + 1}-${cardIndex}`;
+          if (!referencedDocs.some(doc => doc.documentId === docId)) {
+            referencedDocs.push({
+              stepNumber: stepIndex + 1,
+              documentId: docId,
+              title: ragCard.title || docId,
+              used: true
+            });
+          }
+        });
       });
-
-      // 다음 단계 가이드 카드 (하단)
-      ragNextCards.forEach((ragCard, index) => {
-        const docId = ragCard.id || `RAG-NEXT-${index}`;
-        if (!referencedDocs.some(doc => doc.documentId === docId)) {
-          referencedDocs.push({
-            stepNumber: 0,
-            documentId: docId,
-            title: ragCard.title || docId,  // title 없으면 documentId 사용
-            used: true
-          });
-        }
-      });
-
-      console.log('🤖 [통화 종료] RAG 실시간 카드 추가:', ragCurrentCards.length + ragNextCards.length, '개');
+      console.log('🤖 [통화 종료] RAG Step 참조 문서 추가:', ragSteps.length, 'Steps');
     }
 
     // 참조 문서가 하나라도 있으면 저장
@@ -2023,18 +2128,30 @@ export default function RealTimeConsultationPage() {
       localStorage.setItem('currentScenarioCategory', activeScenario.category);
     }
     
+    // ⭐ [v25] 통화 시작 시간 및 통화 시간을 localStorage에 저장 (후처리 페이지에서 사용)
+    localStorage.setItem('consultationStartTime', consultationStartTime);
+    localStorage.setItem('callTime', String(callTime));
+
     // ⭐ [신규] STT 메시지를 상담 전문으로 저장
     if (sttTranscript.length > 0) {
-      // STT timestamp를 HH:MM 형식으로 변환하는 함수
+      // ⭐ [v25] STT timestamp(경과 초)를 통화 시작 시간 기준 HH:MM으로 변환
       const convertTimestampToTime = (seconds: number): string => {
+        if (consultationStartTime) {
+          const timePart = consultationStartTime.split(' ')[1] || '00:00';
+          const [startHour, startMin] = timePart.split(':').map(Number);
+          const totalSeconds = startHour * 3600 + startMin * 60 + seconds;
+          const hours = Math.floor(totalSeconds / 3600) % 24;
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+          return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+        // fallback: 현재 시각 기반
         const now = new Date();
-        const hours = now.getHours();
-        const baseMinutes = now.getMinutes();
-        const totalMinutes = baseMinutes + Math.floor(seconds / 60);
-        const finalMinutes = totalMinutes % 60;
-        return `${String(hours).padStart(2, '0')}:${String(finalMinutes).padStart(2, '0')}`;
+        const totalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + seconds;
+        const hours = Math.floor(totalSeconds / 3600) % 24;
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
       };
-      
+
       const transcript = sttTranscript.map(stt => ({
         speaker: stt.speaker,
         message: stt.message,
@@ -2047,6 +2164,13 @@ export default function RealTimeConsultationPage() {
     }
 
     stopRecording(); // ⭐ 웹소켓 녹음 종료
+    // ⭐ [v25] TTS 오디오 정지 + 시뮬레이션 상태 초기화
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current = null;
+    }
+    wsConnectedRef.current = false;
+    simulationSessionIdRef.current = null;
     setIsCallActive(false);
     setIsEndCallModalOpen(false);
     setStartTimestamp(0); // ⭐ 타임스탬프 초기화
@@ -2168,8 +2292,13 @@ export default function RealTimeConsultationPage() {
       }
     };
 
-    // 2초 후 API 호출 (페이지 전환 후)
-    setTimeout(callACWAnalysis, 2000);
+    // ⭐ [v25] 다이렉트콜만 실제 LLM API 호출 (대기콜은 Mock 시나리오 데이터 사용)
+    if (isDirectIncoming) {
+      // 2초 후 API 호출 (페이지 전환 후)
+      setTimeout(callACWAnalysis, 2000);
+    } else {
+      console.log('📋 [ACW] 대기콜 → Mock 시나리오 데이터 사용 (LLM API 호출 생략)');
+    }
   };
 
   const handleCancelEndCall = () => {
@@ -2250,6 +2379,7 @@ export default function RealTimeConsultationPage() {
       await handleSearchExecution({
         query,
         isCallActive,
+        isDirectIncoming,
         setSearchHistory,
         setSearchResults,
         setConsultationReferences,
@@ -2429,7 +2559,8 @@ export default function RealTimeConsultationPage() {
 
     // 통화 시작
     setIsCallActive(true);
-    
+    wasCallActiveRef.current = true; // ⭐ [v25] 통화 활성 추적
+
     setCallTime(0);
     setStartTimestamp(0); // ⭐ 타임스탬프 초기화
     setActiveLayer('kanban'); // 인입 시 칸반 레이어로 전환
@@ -2882,7 +3013,7 @@ export default function RealTimeConsultationPage() {
                     <div id="keyword-area" className="flex-shrink-0" style={{ width: '240px' }}>
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-xs font-bold text-[#333333]">인입 키워드</h3>
-                        {isCallActive && displayedKeywords.length < 3 && (
+                        {isCallActive && isExtractingKeywords && (
                           <span className="text-[10px] text-[#666666] flex items-center gap-1">
                             <span className="inline-block w-1 h-1 bg-[#0047AB] rounded-full animate-bounce" style={{ animationDelay: '0s' }}></span>
                             <span className="inline-block w-1 h-1 bg-[#0047AB] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
@@ -2935,7 +3066,7 @@ export default function RealTimeConsultationPage() {
                 )}
           
                 {/* 현재 상황 칸반보드 - 키워드 감지 후에만 표시 (RAG 결과 있으면 다이렉트도 표시) */}
-                {isCallActive && (!isDirectIncoming || ragCurrentCards.length > 0) && (
+                {isCallActive && (!isDirectIncoming || ragSteps.length > 0) && (
                   <div 
                     id="current-cards-area"
                     className="mb-5"
@@ -2953,16 +3084,16 @@ export default function RealTimeConsultationPage() {
                       )}
                     </h2>
                     
-                    {/* Step 진행 인디케이터 - 키워드 감지 후에만 표시 */}
-                    {isKeywordDetected && activeScenario && (
-                      <div 
+                    {/* Step 진행 인디케이터 - 시나리오 또는 RAG Step이 있을 때 표시 */}
+                    {isKeywordDetected && (activeScenario || ragSteps.length > 0) && (
+                      <div
                         id="next-step-button"
                         className="flex items-center justify-between mb-3"
                       >
                         {/* 좌측: 인디케이터 막대들 + Step N/N */}
                         <div className="flex items-center gap-2">
                           {/* 가로 막대 인디케이터 - 동적 렌더링 */}
-                          {activeScenario.steps.map((_, index) => (
+                          {Array.from({ length: activeScenario ? activeScenario.steps.length : maxReachedStep }).map((_, index) => (
                             <button
                               key={index}
                               onClick={() => handleProgressClick(index)}
@@ -2978,17 +3109,19 @@ export default function RealTimeConsultationPage() {
                               }
                             />
                           ))}
-                          
+
                           {/* Step N/N 텍스트 - 한 번만 표시 */}
                           <span className="text-[10px] text-[#666666] ml-2">
                             Step {currentStep} / {maxReachedStep}
                           </span>
                         </div>
-                        
+
                         {/* 우측: 드래그 가이드 */}
-                        <span className="text-[10px] text-[#999999]">
-                          ← 드래그하여 Step 전환 →
-                        </span>
+                        {maxReachedStep > 1 && (
+                          <span className="text-[10px] text-[#999999]">
+                            ← 드래그하여 Step 전환 →
+                          </span>
+                        )}
                       </div>
                     )}
                     
@@ -3023,37 +3156,41 @@ export default function RealTimeConsultationPage() {
                           />
                         </motion.div>
                       ))}
-                      {/* ⭐ [v23] RAG 기반 카드 (실시간 모드) - 우→좌 슬라이드 애니메이션 */}
-                      {!activeScenario && ragCurrentCards.length > 0 && ragCurrentCards.slice(0, 2).map((ragCard, index) => {
-                        const card = convertRagToScenarioCard(ragCard, index);
-                        return (
-                          <motion.div
-                            key={`rag-current-${card.id}`}
-                            initial={{ opacity: 0, x: 50 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{
-                              type: 'spring',
-                              stiffness: 120,
-                              damping: 20,
-                              mass: 0.8,
-                              delay: index * 0.1
-                            }}
-                          >
-                            <InfoCard
-                              card={card}
-                              stepNumber={1}
-                              source="ai-recommend"
-                              onDetailClick={() => handleCardClick(card)}
-                            />
-                          </motion.div>
-                        );
-                      })}
+                      {/* ⭐ [v25] RAG Step 기반 카드 (시나리오와 동일한 Step 전환 UX) */}
+                      {!activeScenario && ragSteps.length > 0 && currentStep > 0 && (() => {
+                        const stepData = ragSteps[currentStep - 1];
+                        if (!stepData || stepData.currentCards.length === 0) return null;
+                        return stepData.currentCards.slice(0, 2).map((ragCard, index) => {
+                          const card = convertRagToScenarioCard(ragCard, index);
+                          return (
+                            <motion.div
+                              key={`rag-current-${card.id}-step${currentStep}`}
+                              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              transition={{
+                                type: 'spring',
+                                stiffness: 150,
+                                damping: 28,
+                                mass: 0.8,
+                                delay: index * 0.05
+                              }}
+                            >
+                              <InfoCard
+                                card={card}
+                                stepNumber={currentStep}
+                                source="ai-recommend"
+                                onDetailClick={() => handleCardClick(card)}
+                              />
+                            </motion.div>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 )}
           
                 {/* 다음 단계 칸반보드 - 키워드 감지 후에만 표시 - 다이렉트 인입 시 표시 안함 */}
-                {isCallActive && (!isDirectIncoming || ragNextCards.length > 0) && isKeywordDetected && showNextStepCards && (
+                {isCallActive && (!isDirectIncoming || ragSteps.length > 0) && isKeywordDetected && showNextStepCards && (
                   <div 
                     id="next-cards-area"
                     className="mb-5"
@@ -3099,31 +3236,35 @@ export default function RealTimeConsultationPage() {
                           />
                         </motion.div>
                       ))}
-                      {/* ⭐ [v23] RAG 기반 카드 (실시간 모드) - 우→좌 슬라이드 애니메이션 */}
-                      {!activeScenario && ragNextCards.length > 0 && ragNextCards.slice(0, 2).map((ragCard, index) => {
-                        const card = convertRagToScenarioCard(ragCard, index);
-                        return (
-                          <motion.div
-                            key={`rag-next-${card.id}`}
-                            initial={{ opacity: 0, x: 50 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{
-                              type: 'spring',
-                              stiffness: 120,
-                              damping: 20,
-                              mass: 0.8,
-                              delay: index * 0.1
-                            }}
-                          >
-                            <InfoCard
-                              card={card}
-                              stepNumber={2}
-                              source="next-step"
-                              onDetailClick={() => handleCardClick(card)}
-                            />
-                          </motion.div>
-                        );
-                      })}
+                      {/* ⭐ [v25] RAG Step 기반 카드 - 다음 단계 */}
+                      {!activeScenario && ragSteps.length > 0 && currentStep > 0 && (() => {
+                        const stepData = ragSteps[currentStep - 1];
+                        if (!stepData || stepData.nextCards.length === 0) return null;
+                        return stepData.nextCards.slice(0, 2).map((ragCard, index) => {
+                          const card = convertRagToScenarioCard(ragCard, index);
+                          return (
+                            <motion.div
+                              key={`rag-next-${card.id}-step${currentStep}`}
+                              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              transition={{
+                                type: 'spring',
+                                stiffness: 150,
+                                damping: 28,
+                                mass: 0.8,
+                                delay: index * 0.05
+                              }}
+                            >
+                              <InfoCard
+                                card={card}
+                                stepNumber={currentStep + 1}
+                                source="next-step"
+                                onDetailClick={() => handleCardClick(card)}
+                              />
+                            </motion.div>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 )}
@@ -3289,26 +3430,43 @@ export default function RealTimeConsultationPage() {
                   </div>
                 </div>
               ) : (
-                // STT 텍스트 표시
-                <div className="leading-relaxed w-full space-y-2">
+                // STT 텍스트 표시 (상담사/고객 화자 구분)
+                <div className="leading-relaxed w-full space-y-1">
                   {sttTexts.map((item, index) => {
                     const category = getKeywordCategory(item.text);
                     const colorClass = category ? categoryColors[category] : '';
-                    
+                    const isCustomer = item.speaker === 'customer';
+                    const prevSpeaker = index > 0 ? sttTexts[index - 1].speaker : null;
+                    const isSpeakerChange = index === 0 || item.speaker !== prevSpeaker;
+
                     return (
-                      <span 
-                        key={index}
-                        className={`text-[10px] inline transition-all duration-300 ${
-                          item.isKeyword 
-                            ? `font-bold px-1.5 py-0.5 rounded-md ${colorClass || 'bg-[#E8F1FC] text-[#0047AB]'}` 
-                            : 'text-[#666666]'
-                        }`}
-                        style={{ 
-                          opacity: index >= sttTexts.length - 15 ? 1 : 0.5,
-                          animation: index === sttTexts.length - 1 ? 'fadeIn 0.4s ease-out' : 'none'
-                        }}
-                      >
-                        {item.text}
+                      <span key={index}>
+                        {/* ⭐ [v25] 화자 전환 시 라벨 표시 */}
+                        {isSpeakerChange && (
+                          <>
+                            {index > 0 && <br />}
+                            <span className={`text-[9px] font-bold inline-block mt-1 mr-1 px-1 py-0.5 rounded ${
+                              isCustomer
+                                ? 'bg-[#ECFDF5] text-[#059669]'
+                                : 'bg-[#EFF6FF] text-[#2563EB]'
+                            }`}>
+                              {isCustomer ? '고객' : '상담사'}
+                            </span>
+                          </>
+                        )}
+                        <span
+                          className={`text-[10px] inline transition-all duration-300 ${
+                            item.isKeyword
+                              ? `font-bold px-1.5 py-0.5 rounded-md ${colorClass || 'bg-[#E8F1FC] text-[#0047AB]'}`
+                              : isCustomer ? 'text-[#059669]' : 'text-[#666666]'
+                          }`}
+                          style={{
+                            opacity: index >= sttTexts.length - 15 ? 1 : 0.5,
+                            animation: index === sttTexts.length - 1 ? 'fadeIn 0.4s ease-out' : 'none'
+                          }}
+                        >
+                          {item.text}
+                        </span>
                       </span>
                     );
                   })}

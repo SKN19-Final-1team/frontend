@@ -40,14 +40,19 @@ export default function SimulationPage() {
     sessionStorage.setItem('simulationMode', 'true');
     sessionStorage.setItem('educationType', 'basic');
     sessionStorage.setItem('scenarioId', scenarioId);
+    // ⭐ [v25] 교육 카테고리 저장 (시뮬레이션 시작 API 호출용)
+    const scenario = scenarios.find(s => s.id === scenarioId);
+    if (scenario) {
+      sessionStorage.setItem('educationCategory', scenario.category);
+    }
     localStorage.removeItem('isGuideModeActive');
-    
-    navigate('/consultation/live', { 
-      state: { 
+
+    navigate('/consultation/live', {
+      state: {
         mode: 'simulation',
         educationType: 'basic',
-        scenarioId 
-      } 
+        scenarioId
+      }
     });
   };
 
@@ -224,6 +229,7 @@ export default function SimulationPage() {
                               sessionStorage.setItem('simulationMode', 'true');
                               sessionStorage.setItem('educationType', 'advanced');
                               sessionStorage.setItem('scenarioId', consultation.id);
+                              sessionStorage.setItem('educationCategory', consultation.category); // ⭐ [v25]
                               localStorage.removeItem('isGuideModeActive');
                               localStorage.setItem('simulationCase', JSON.stringify(consultation));
                               navigate('/consultation/live', {

@@ -134,6 +134,9 @@ export default function AfterCallWorkPage() {
         console.log('⏳ [ACW 로드] 페이지 안정화 대기 중...');
         await delay(500);
 
+        // ⭐ [v25] Mock 처리 타임라인 보관 (타이핑 애니메이션 후 표시용)
+        let mockTimeline: ProcessingTimelineItem[] | null = null;
+
         // ⭐ [v24] 먼저 실제 LLM API 결과 확인 (llmApiResult)
         const llmResultStr = localStorage.getItem('llmApiResult');
         let aiAnalysisData: {
@@ -176,11 +179,25 @@ export default function AfterCallWorkPage() {
 
             // ⭐ [v24] LLM 응답의 script 필드(화자 분리된 전문)가 있으면 우선 사용
             if (llmResult.script && Array.isArray(llmResult.script) && llmResult.script.length > 0) {
-              const diarizedTranscript = llmResult.script.map((item: { speaker: string; message: string }, index: number) => ({
-                speaker: item.speaker,
-                message: item.message,
-                timestamp: `00:${String(index * 10).padStart(2, '0')}`  // 임시 타임스탬프
-              }));
+              // ⭐ [v25] 통화 시작 시간 기반 실제 타임스탬프 계산
+              const savedStartTime = localStorage.getItem('consultationStartTime') || '';
+              const savedCallTime = parseInt(localStorage.getItem('callTime') || '0', 10);
+              const timePart = savedStartTime.split(' ')[1] || '00:00';
+              const [sHour, sMin] = timePart.split(':').map(Number);
+
+              const diarizedTranscript = llmResult.script.map((item: { speaker: string; message: string }, index: number) => {
+                const intervalSec = llmResult.script.length > 1
+                  ? Math.floor(savedCallTime / (llmResult.script.length - 1)) * index
+                  : 0;
+                const totalSec = sHour * 3600 + sMin * 60 + intervalSec;
+                const h = Math.floor(totalSec / 3600) % 24;
+                const m = Math.floor((totalSec % 3600) / 60);
+                return {
+                  speaker: item.speaker,
+                  message: item.message,
+                  timestamp: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+                };
+              });
               setCallTranscript(diarizedTranscript);
               // ⭐ LLM 화자 분리 전문 사용 플래그 설정 (STT 덮어쓰기 방지)
               localStorage.setItem('useLLMScript', 'true');
@@ -220,12 +237,12 @@ export default function AfterCallWorkPage() {
             followUpTasks: acwData.aiAnalysis.followUpTasks || '',
             handoffDepartment: acwData.aiAnalysis.handoffDepartment || '없음',
             handoffNotes: acwData.aiAnalysis.handoffNotes || '',
-            handledCategories: acwData.processingTimeline?.map((t: { step: string }) => t.step) || []
+            handledCategories: acwData.processingTimeline?.map((t: ProcessingTimelineItem) => t.action) || []
           };
 
-          // Mock 데이터의 처리 타임라인 설정
+          // ⭐ [v25] Mock 처리 타임라인은 즉시 표시하지 않고, 타이핑 애니메이션 후 표시
           if (acwData.processingTimeline) {
-            setProcessingTimeline(acwData.processingTimeline);
+            mockTimeline = acwData.processingTimeline;
           }
 
           // Mock 데이터의 transcript 설정
@@ -311,13 +328,32 @@ export default function AfterCallWorkPage() {
 
         await delay(300);
 
-        // 4. 🎯 LLM 결과에서 처리 내역 타임라인 생성 (handledCategories 사용)
-        if (aiAnalysisData.handledCategories && aiAnalysisData.handledCategories.length > 0) {
-          const generatedTimeline = aiAnalysisData.handledCategories.map((step: string, index: number) => ({
-            time: new Date(Date.now() - (aiAnalysisData!.handledCategories!.length - index) * 30000).toISOString().slice(11, 19),
-            action: step,
-            categoryRaw: null
-          }));
+        // 4. 🎯 처리 내역 타임라인 표시 (타이핑 애니메이션 완료 후)
+        if (mockTimeline) {
+          // ⭐ [v25] 대기콜: Mock 타임라인을 그대로 사용 (애니메이션은 ProcessingTimeline 컴포넌트가 처리)
+          setProcessingTimeline(mockTimeline);
+          console.log('✅ [ACW 로드] Mock 처리 타임라인 표시:', mockTimeline);
+        } else if (aiAnalysisData.handledCategories && aiAnalysisData.handledCategories.length > 0) {
+          // 다이렉트콜: LLM handledCategories에서 타임라인 생성
+          const savedStartTime = localStorage.getItem('consultationStartTime') || '';
+          const savedCallTime = parseInt(localStorage.getItem('callTime') || '0', 10);
+          const timePart = savedStartTime.split(' ')[1] || '00:00';
+          const [sHour, sMin] = timePart.split(':').map(Number);
+
+          const generatedTimeline = aiAnalysisData.handledCategories.map((step: string, index: number) => {
+            const intervalSec = aiAnalysisData!.handledCategories!.length > 1
+              ? Math.floor(savedCallTime / (aiAnalysisData!.handledCategories!.length - 1)) * index
+              : 0;
+            const totalSec = sHour * 3600 + sMin * 60 + intervalSec;
+            const h = Math.floor(totalSec / 3600) % 24;
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = totalSec % 60;
+            return {
+              time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
+              action: step,
+              categoryRaw: null
+            };
+          });
           setProcessingTimeline(generatedTimeline);
           console.log('✅ [ACW 로드] LLM 기반 처리 타임라인 생성:', generatedTimeline);
         }
@@ -356,23 +392,45 @@ export default function AfterCallWorkPage() {
           setAiSummary(llmData.aiSummary);
         }
 
+        // ⭐ [v25] 통화 시작 시간/통화 시간 로드 (타임스탬프 계산용)
+        const evtStartTime = localStorage.getItem('consultationStartTime') || '';
+        const evtCallTime = parseInt(localStorage.getItem('callTime') || '0', 10);
+        const evtTimePart = evtStartTime.split(' ')[1] || '00:00';
+        const [evtSHour, evtSMin] = evtTimePart.split(':').map(Number);
+
         // 처리 타임라인 업데이트 (기존 형식에 맞춤: time, action, categoryRaw)
         if (llmData.handledCategories && Array.isArray(llmData.handledCategories)) {
-          const generatedTimeline = llmData.handledCategories.map((step: string, index: number) => ({
-            time: `00:${String((index + 1) * 30).padStart(2, '0')}`,
-            action: step,
-            categoryRaw: null
-          }));
+          const generatedTimeline = llmData.handledCategories.map((step: string, index: number) => {
+            const intervalSec = llmData.handledCategories.length > 1
+              ? Math.floor(evtCallTime / llmData.handledCategories.length) * (index + 1)
+              : 0;
+            const totalSec = evtSHour * 3600 + evtSMin * 60 + intervalSec;
+            const h = Math.floor(totalSec / 3600) % 24;
+            const m = Math.floor((totalSec % 3600) / 60);
+            return {
+              time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+              action: step,
+              categoryRaw: null
+            };
+          });
           setProcessingTimeline(generatedTimeline);
         }
 
         // 화자분리된 상담 전문 업데이트
         if (llmData.script && Array.isArray(llmData.script) && llmData.script.length > 0) {
-          const diarizedTranscript = llmData.script.map((item: { speaker: string; message: string }, index: number) => ({
-            speaker: item.speaker,
-            message: item.message,
-            timestamp: `00:${String(index * 10).padStart(2, '0')}`
-          }));
+          const diarizedTranscript = llmData.script.map((item: { speaker: string; message: string }, index: number) => {
+            const intervalSec = llmData.script.length > 1
+              ? Math.floor(evtCallTime / (llmData.script.length - 1)) * index
+              : 0;
+            const totalSec = evtSHour * 3600 + evtSMin * 60 + intervalSec;
+            const h = Math.floor(totalSec / 3600) % 24;
+            const m = Math.floor((totalSec % 3600) / 60);
+            return {
+              speaker: item.speaker,
+              message: item.message,
+              timestamp: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+            };
+          });
           setCallTranscript(diarizedTranscript);
           localStorage.setItem('useLLMScript', 'true');
           console.log('🎤 [ACW 이벤트] LLM 화자 분리 전문 적용:', diarizedTranscript.length, '개 발화');
