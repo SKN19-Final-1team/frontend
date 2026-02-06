@@ -6,15 +6,100 @@
 import type { CustomerInfo } from '../data/scenarios';
 
 /**
+ * 영어 personalityTags → 한글 변환 매핑
+ * DB에 영어로 저장된 태그를 한글로 표시
+ */
+const PERSONALITY_TAG_MAP: { [key: string]: string } = {
+  // 성격/성향
+  'impatient': '성급함',
+  'emotional': '감정적',
+  'calm': '차분함',
+  'friendly': '친절함',
+  'aggressive': '공격적',
+  'passive': '수동적',
+  'analytical': '분석적',
+  'expressive': '표현적',
+  'assertive': '적극적',
+  'reserved': '내성적',
+  'talkative': '수다형',
+  'personal': '친밀형',
+  'quiet': '조용함',
+  'polite': '예의바름',
+  'direct': '직접적',
+  'indirect': '우회적',
+  'patient': '인내심',
+  'anxious': '불안함',
+  'confident': '자신감',
+  'hesitant': '망설임',
+
+  // 상담 스타일
+  'quick_response': '빠른 답변 선호',
+  'detailed_explanation': '상세 설명 필요',
+  'empathy_needed': '공감 필요',
+  'repeat_explanation': '반복 설명 필요',
+  'self_service': '셀프서비스 선호',
+  'digital_native': '디지털 친화',
+  'tech_savvy': '기술 친화적',
+  'needs_empathy': '공감 필요',
+  'detail_oriented': '꼼꼼함',
+
+  // 고객 유형
+  'vip': 'VIP 고객',
+  'premium': '프리미엄 고객',
+  'loyal': '충성 고객',
+  'new_customer': '신규 고객',
+  'senior': '시니어',
+  'business': '비즈니스 고객',
+  'regular': '일반 고객',
+
+  // 주의 필요
+  'complaint_prone': '민원 이력',
+  'delinquent': '연체 이력',
+  'cost_sensitive': '비용 민감',
+  'high_maintenance': '요구사항 많음',
+  'sensitive': '민감함',
+  'urgent': '긴급',
+  'time_sensitive': '시간 민감',
+  'rushed': '급함',
+  'busy': '바쁨',
+};
+
+/**
+ * 영어 태그를 한글로 변환
+ */
+export function translatePersonalityTag(tag: string): string {
+  // 이미 한글이면 그대로 반환
+  if (/[가-힣]/.test(tag)) {
+    return tag;
+  }
+  // 매핑된 한글이 있으면 반환, 없으면 원본
+  return PERSONALITY_TAG_MAP[tag.toLowerCase()] || tag;
+}
+
+/**
  * 고객 특성 태그 색상 매핑 (UI 배지용)
  * ⭐ Phase 10: 12개 페르소나 특성 추가 + 블루 계열 통일
  */
 export function getTraitColor(trait: string): { bg: string; text: string } {
   const colorMap: { [key: string]: { bg: string; text: string } } = {
+    // 등급별 테마 색상 (짧은 형식)
+    'VIP': { bg: '#FDF4E7', text: '#B8860B' },          // 골드 계열
+    'GOLD': { bg: '#FDF4E7', text: '#B8860B' },         // 골드 계열
+    'PREMIUM': { bg: '#F3E8FF', text: '#7C3AED' },      // 퍼플 계열
+    'SILVER': { bg: '#F1F5F9', text: '#475569' },       // 실버 계열
+    'GENERAL': { bg: '#F5F5F5', text: '#666666' },      // 일반 그레이
+    '일반': { bg: '#F5F5F5', text: '#666666' },         // 일반 그레이
+    // 등급별 테마 색상 (긴 형식 - 호환용)
+    'VIP 등급': { bg: '#FDF4E7', text: '#B8860B' },
+    'GOLD 등급': { bg: '#FDF4E7', text: '#B8860B' },
+    'PREMIUM 등급': { bg: '#F3E8FF', text: '#7C3AED' },
+    'SILVER 등급': { bg: '#F1F5F9', text: '#475569' },
+    'GENERAL 등급': { bg: '#F5F5F5', text: '#666666' },
+
     // 긍정적 특성 - 진한 블루
-    'VIP 고객': { bg: '#E8F1FC', text: '#0047AB' },
-    'PREMIUM': { bg: '#E8F1FC', text: '#0047AB' },
-    'GOLD': { bg: '#E8F1FC', text: '#0047AB' },
+    'VIP 고객': { bg: '#FDF4E7', text: '#B8860B' },
+    'PREMIUM': { bg: '#F3E8FF', text: '#7C3AED' },
+    'GOLD': { bg: '#FDF4E7', text: '#B8860B' },
     '신용 관리 철저': { bg: '#E8F1FC', text: '#0047AB' },
     '계획적인 성향': { bg: '#E8F1FC', text: '#0047AB' },
     '기술 친화적': { bg: '#E8F1FC', text: '#0047AB' },
@@ -37,8 +122,14 @@ export function getTraitColor(trait: string): { bg: string; text: string } {
     '효율 중시': { bg: '#F5F5F5', text: '#666666' },
     '목적 지향적': { bg: '#F5F5F5', text: '#666666' },
     '친화적': { bg: '#F5F5F5', text: '#666666' },
-    '수다형': { bg: '#F5F5F5', text: '#666666' },
+    '수다형': { bg: '#E8F4FD', text: '#1976D2' },
+    '친밀형': { bg: '#E8F4FD', text: '#1976D2' },
     '대화 선호': { bg: '#F5F5F5', text: '#666666' },
+    '조용함': { bg: '#F5F5F5', text: '#666666' },
+    '예의바름': { bg: '#E8F1FC', text: '#0047AB' },
+    '인내심': { bg: '#E8F1FC', text: '#0047AB' },
+    '자신감': { bg: '#E8F1FC', text: '#0047AB' },
+    '꼼꼼함': { bg: '#F5F5F5', text: '#666666' },
     '빠른 답변 선호': { bg: '#F5F5F5', text: '#666666' },
     '바쁨': { bg: '#F5F5F5', text: '#666666' },
     '상세한 설명 필요': { bg: '#F5F5F5', text: '#666666' },
@@ -70,6 +161,13 @@ export function getTraitColor(trait: string): { bg: string; text: string } {
     '반복 민원': { bg: '#D4E3F3', text: '#003580' },
     '좌절감': { bg: '#D4E3F3', text: '#003580' },
     '불만 항의': { bg: '#D4E3F3', text: '#003580' },
+    '긴급': { bg: '#FEE2E2', text: '#DC2626' },         // 빨간색 계열
+    '시간 민감': { bg: '#FEF3C7', text: '#D97706' },    // 주황색 계열
+    '급함': { bg: '#FEE2E2', text: '#DC2626' },
+    '바쁨': { bg: '#FEF3C7', text: '#D97706' },
+    '민감함': { bg: '#D4E3F3', text: '#003580' },
+    '불안함': { bg: '#D4E3F3', text: '#003580' },
+    '망설임': { bg: '#F5F5F5', text: '#666666' },
   };
 
   return colorMap[trait] || { bg: '#F5F5F5', text: '#999999' };  // 기본값

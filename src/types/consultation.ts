@@ -128,6 +128,13 @@ export interface LLMAnalysisResult {
  * 
  * TODO: 백엔드 API 스펙 확정 후 수정
  */
+// 처리 타임라인 항목
+export interface ProcessingTimelineItem {
+  time: string;      // "14:32:30" 형식
+  action: string;    // "고객 본인 확인"
+  category?: string | null; // 카테고리 (선택)
+}
+
 export interface SaveConsultationRequest {
   consultationId: string;
   employeeId: string;
@@ -147,6 +154,7 @@ export interface SaveConsultationRequest {
   handoffNotes: string;
   referencedDocuments: ReferencedDocument[];
   referencedDocumentIds: string[];
+  processingTimeline?: ProcessingTimelineItem[]; // ⭐ 처리 타임라인
   sentiment?: string;
   feedbackScore?: number;   // ⭐ Phase 10-5: 피드백 점수 (100점 만점, 0-100)
   satisfactionScore?: number; // ⭐ Phase 10-5: 고객 만족도 (5점 만점, 1-5)

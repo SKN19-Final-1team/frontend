@@ -1,54 +1,82 @@
+import { ChevronLeft, ChevronRight, Search, Plus, Edit, Eye, Pin, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { noticesData as initialNoticesData } from '@/data/mock';
 import MainLayout from '../components/layout/MainLayout';
-import { Plus, Edit, Trash2, Pin, Eye, Search } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { noticesData as initialNoticesData } from '../../data/mockData';
+import { fetchNotices, togglePinNotice, deleteNotice, type Notice } from '@/api/noticesApi';
 
 export default function AdminNoticePage() {
   const navigate = useNavigate();
-  const [notices, setNotices] = useState(initialNoticesData);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [tagFilter, setTagFilter] = useState('전체');
   const [authorFilter, setAuthorFilter] = useState('전체');
 
-  // 초기 로드: LocalStorage에서 공지사항 불러오기
+  // ⭐ 공지사항 로드 (API 또는 Mock - USE_MOCK_DATA에 따라 자동 전환)
+  // 관리 페이지에서는 작성일 기준 최신순으로 정렬 (date_only)
   useEffect(() => {
-    const saved = localStorage.getItem('notices');
-    if (saved) {
+    const loadNotices = async () => {
       try {
-        const parsedNotices = JSON.parse(saved);
-        setNotices(parsedNotices);
+        setIsLoading(true);
+        const data = await fetchNotices(100, 0, 'date_only'); // 전체 공지사항, 최신순 정렬
+        setNotices(data);
       } catch (e) {
         console.error('Failed to load notices', e);
+        setNotices(initialNoticesData); // fallback
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+    loadNotices();
   }, []);
 
-  // 공지사항이 변경될 때마다 localStorage에 저장
+  // 공지사항이 변경될 때마다 localStorage에 저장 (로딩 완료 후에만)
+  // ⚠️ 참고: 현재는 pin/삭제 등 로컬 변경만 저장. 실제 DB 반영은 API 구현 필요
   useEffect(() => {
+    if (isLoading || notices.length === 0) return; // 초기 로딩 중에는 저장 안 함
+
     localStorage.setItem('notices', JSON.stringify(notices));
-    
+
     // 고정 공지사항만 따로 저장 (대시보드용)
     const pinnedNotices = notices.filter(n => n.pinned);
     localStorage.setItem('pinnedAnnouncements', JSON.stringify(pinnedNotices));
-  }, [notices]);
+  }, [notices, isLoading]);
 
-  // 공지 픽스 토글
-  const togglePin = (id: number) => {
-    setNotices(prev =>
-      prev.map(notice =>
-        notice.id === id ? { ...notice, pinned: !notice.pinned } : notice
-      )
-    );
+  // ⭐ 공지 픽스 토글 (API 호출)
+  const togglePin = async (id: number) => {
+    try {
+      const result = await togglePinNotice(id);
+      if (result) {
+        setNotices(prev =>
+          prev.map(notice =>
+            notice.id === id ? { ...notice, pinned: result.pinned } : notice
+          )
+        );
+      }
+    } catch (e) {
+      console.error('Failed to toggle pin', e);
+      alert('핀 설정 변경에 실패했습니다.');
+    }
   };
 
-  // 공지 삭제
-  const handleDelete = (id: number) => {
+  // ⭐ 공지 삭제 (API 호출)
+  const handleDelete = async (id: number) => {
     if (confirm('정말 삭제하시겠습니까?')) {
-      setNotices(prev => prev.filter(n => n.id !== id));
+      try {
+        const success = await deleteNotice(id);
+        if (success) {
+          setNotices(prev => prev.filter(n => n.id !== id));
+        } else {
+          alert('삭제에 실패했습니다.');
+        }
+      } catch (e) {
+        console.error('Failed to delete notice', e);
+        alert('삭제 중 오류가 발생했습니다.');
+      }
     }
   };
 
@@ -170,10 +198,13 @@ export default function AdminNoticePage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredNotices.sort((a, b) => {
+                {/* 고정 공지 먼저, 각 그룹 내에서는 API 순서(작성일 최신순) 유지 */}
+                {[...filteredNotices].sort((a, b) => {
+                  // 고정 공지 우선
                   if (a.pinned && !b.pinned) return -1;
                   if (!a.pinned && b.pinned) return 1;
-                  return b.id - a.id;
+                  // 같은 그룹 내에서는 API 순서 유지 (이미 작성일 기준 정렬됨)
+                  return 0;
                 }).map((notice) => (
                   <tr 
                     key={notice.id}

@@ -19,9 +19,18 @@ import RealTimeConsultationPage from './pages/RealTimeConsultationPage';
 import AdminConsultationManagePage from './pages/AdminConsultationManagePage';
 import LoadingPage from './pages/LoadingPage'; // ⭐ Phase 8-3: 로딩 페이지
 import { SidebarProvider } from './contexts/SidebarContext';
-import { employeesData } from '../data/mockData';
+import { employeesData } from '@/data/mock';
 import { Toaster } from './components/ui/sonner'; // ⭐ Phase 10-2: Toast 알림
 import { toast } from 'sonner';
+
+// ⭐ 개발 모드: 데이터 검증 유틸리티 import
+if (import.meta.env.DEV) {
+  import('@/utils/dataValidator').then(({ validateAllData, printValidationReport }) => {
+    // 앱 시작 시 자동 검증
+    const report = validateAllData();
+    printValidationReport(report);
+  });
+}
 
 export default function App() {
   // 앱 초기 로드 시 mockData를 LocalStorage에 저장 (외부 게시 사이트 대응)
@@ -70,7 +79,8 @@ export default function App() {
           <Route path="/admin/notice/create" element={<ProtectedRoute><AdminNoticeCreatePage /></ProtectedRoute>} />
           <Route path="/admin/notice/edit/:id" element={<ProtectedRoute><AdminNoticeEditPage /></ProtectedRoute>} />
           <Route path="/admin/consultations" element={<ProtectedRoute><AdminConsultationManagePage /></ProtectedRoute>} />
-          <Route path="/loading" element={<LoadingPage />} /> // ⭐ Phase 8-3: 로딩 페이지
+          {/* ⭐ Phase 8-3: 로딩 페이지 */}
+          <Route path="/loading" element={<LoadingPage />} />
         </Routes>
         {/* ⭐ Phase 10-2: Toast 알림 시스템 */}
         <Toaster 

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { formatNoticeContent } from '@/utils/textFormatter';
 
 interface AnnouncementModalProps {
   isOpen: boolean;
@@ -74,7 +75,7 @@ export default function AnnouncementModal({ isOpen, onClose, announcement }: Ann
           <div className="prose prose-sm max-w-none">
             {announcement.content ? (
               <div className="text-xs text-[#333333] leading-relaxed whitespace-pre-wrap">
-                {announcement.content}
+                {formatNoticeContent(announcement.content)}
               </div>
             ) : (
               <div className="text-xs text-[#333333] leading-relaxed">

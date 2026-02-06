@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { noticesData, consultationsData, frequentInquiriesData, employeesData, simulationsData } from '../../data/mockData';
-import { frequentInquiriesDetailData } from '../../data/frequentInquiriesDetail';
+import { noticesData, consultationsData, frequentInquiriesData, employeesData, simulationsData, dashboardStatsData, weeklyGoalData, teamStatsData, frequentInquiriesDetailData } from '@/data/mock';
 import { enrichConsultationData } from '../../data/consultationsDataHelper';
 import ConsultationDetailModal from '../components/modals/ConsultationDetailModal';
 import AnnouncementModal from '../components/modals/AnnouncementModal';
@@ -8,56 +7,18 @@ import FrequentInquiryModal from '../components/modals/FrequentInquiryModal';
 import { useState, useEffect } from 'react';
 import { CheckCircle, Clock, XCircle, AlertCircle, ExternalLink, Star, TrendingUp, TrendingDown, Minus, Target, Users, BookOpen, Shield, Play } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
+import { fetchNotices, incrementViewCount, type Notice } from '@/api/noticesApi';
+import { fetchTopEmployees, type TopEmployee } from '@/api/employeesApi';
+import { fetchConsultations, type ConsultationItem } from '@/api/consultationApi';
 
-const stats = {
-  todayCalls: 127,
-  completed: 95,
-  pending: 12,
-  incomplete: 20
-};
-
+// ⭐ Mock 데이터에서 가져오기
+const stats = dashboardStatsData;
 const frequentInquiries = frequentInquiriesData;
 
-// Mock 데이터에서 실제 우수 사원 추출 (rank 1, 2, 3)
-const topEmployees = employeesData
-  .filter(emp => emp.rank <= 3)
-  .sort((a, b) => a.rank - b.rank)
-  .map((emp, index) => {
-    const titles = [
-      `FCR ${emp.fcr}% 달성`, // 1위
-      `평균 ${emp.avgTime} 처리 시간`, // 2위
-      `월간 ${emp.consultations}건 상담` // 3위
-    ];
-    return {
-      id: emp.id,
-      name: emp.name,
-      title: titles[index] || `FCR ${emp.fcr}% 달성`,
-      team: emp.team,
-      rank: emp.rank
-    };
-  });
+// ⭐ 우수 상담사는 이제 컴포넌트 내부에서 API로 가져옴 (아래 useEffect 참조)
 
-const weeklyGoal = {
-  target: 500,
-  current: 389,
-  percentage: 78
-};
-
-const teamStats = [
-  { team: 'A팀', calls: 142, fcr: 94, color: '#0047AB' },
-  { team: 'B팀', calls: 128, fcr: 89, color: '#34A853' },
-  { team: 'C팀', calls: 119, fcr: 91, color: '#FBBC04' },
-];
-
-const consultationHistory = consultationsData.map(c => {
-  const enriched = enrichConsultationData(c);
-  return {
-    ...enriched,
-    title: enriched.memo || '상담 내용',
-    time: enriched.datetime.split(' ')[1],
-    date: enriched.datetime.split(' ')[0],
-  };
-});
+const weeklyGoal = weeklyGoalData;
+const teamStats = teamStatsData;
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -65,29 +26,114 @@ export default function DashboardPage() {
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null);
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
-  const [announcements, setAnnouncements] = useState(noticesData.slice(0, 5));
+  const [announcements, setAnnouncements] = useState<Notice[]>([]);
+  const [isLoadingNotices, setIsLoadingNotices] = useState(true);
+  const [topEmployees, setTopEmployees] = useState<TopEmployee[]>([]);
+  const [isLoadingTopEmployees, setIsLoadingTopEmployees] = useState(true);
   const [selectedFrequentInquiry, setSelectedFrequentInquiry] = useState<any>(null);
   const [isFrequentInquiryModalOpen, setIsFrequentInquiryModalOpen] = useState(false);
+  const [consultationHistory, setConsultationHistory] = useState<any[]>([]);
+  const [isLoadingConsultations, setIsLoadingConsultations] = useState(true);
 
   // 현재 사용자 권한 확인 (localStorage에서)
   const userRole = localStorage.getItem('userRole') || 'employee';
 
-  // localStorage에서 픽스된 공지사항 불러오기
+  // ⭐ 공지사항 로드 (API 또는 Mock - USE_MOCK_DATA에 따라 자동 전환)
   useEffect(() => {
-    const saved = localStorage.getItem('pinnedAnnouncements');
-    if (saved) {
+    const loadNotices = async () => {
       try {
-        const pinnedAnnouncements = JSON.parse(saved);
-        if (pinnedAnnouncements.length > 0) {
-          const unpinnedDefaults = noticesData.filter(
-            a => !pinnedAnnouncements.find((p: any) => p.id === a.id)
-          );
-          setAnnouncements([...pinnedAnnouncements.slice(0, 5), ...unpinnedDefaults].slice(0, 5));
+        setIsLoadingNotices(true);
+        const notices = await fetchNotices(10);
+
+        // localStorage에서 pinned 공지 확인
+        const saved = localStorage.getItem('pinnedAnnouncements');
+        if (saved) {
+          const pinnedAnnouncements = JSON.parse(saved);
+          if (pinnedAnnouncements.length > 0) {
+            const unpinnedNotices = notices.filter(
+              (n: Notice) => !pinnedAnnouncements.find((p: any) => p.id === n.id)
+            );
+            setAnnouncements([...pinnedAnnouncements.slice(0, 5), ...unpinnedNotices].slice(0, 5));
+            return;
+          }
         }
+
+        setAnnouncements(notices.slice(0, 5));
       } catch (e) {
-        console.error('Failed to load pinned announcements', e);
+        console.error('Failed to load notices', e);
+        setAnnouncements(noticesData.slice(0, 5)); // fallback to mock
+      } finally {
+        setIsLoadingNotices(false);
       }
-    }
+    };
+    loadNotices();
+  }, []);
+
+  // ⭐ 우수 상담사 로드 (API 또는 Mock - USE_MOCK_DATA에 따라 자동 전환)
+  useEffect(() => {
+    const loadTopEmployees = async () => {
+      try {
+        setIsLoadingTopEmployees(true);
+        const employees = await fetchTopEmployees(3);
+        setTopEmployees(employees);
+      } catch (e) {
+        console.error('Failed to load top employees', e);
+        // fallback to mock
+        const fallback = employeesData
+          .filter(emp => emp.rank <= 3)
+          .sort((a, b) => a.rank - b.rank)
+          .map((emp, index) => ({
+            id: emp.id,
+            name: emp.name,
+            title: index === 0 ? `FCR ${emp.fcr}% 달성` : index === 1 ? `평균 ${emp.avgTime} 처리 시간` : `월간 ${emp.consultations}건 상담`,
+            team: emp.team,
+            rank: emp.rank
+          }));
+        setTopEmployees(fallback);
+      } finally {
+        setIsLoadingTopEmployees(false);
+      }
+    };
+    loadTopEmployees();
+  }, []);
+
+  // ⭐ 상담 내역 로드 (API 또는 Mock - USE_MOCK_DATA에 따라 자동 전환)
+  useEffect(() => {
+    const loadConsultations = async () => {
+      try {
+        setIsLoadingConsultations(true);
+        const data = await fetchConsultations({ limit: 20 });
+
+        // 데이터 가공 (title, time, date 추가)
+        const enrichedData = data.map((c: ConsultationItem) => {
+          const enriched = enrichConsultationData(c);
+          return {
+            ...enriched,
+            title: enriched.memo || enriched.content || '상담 내용',
+            time: enriched.datetime?.split(' ')[1] || '',
+            date: enriched.datetime?.split(' ')[0] || '',
+          };
+        });
+
+        setConsultationHistory(enrichedData);
+      } catch (e) {
+        console.error('Failed to load consultations', e);
+        // fallback to mock
+        const fallbackData = consultationsData.map(c => {
+          const enriched = enrichConsultationData(c);
+          return {
+            ...enriched,
+            title: enriched.memo || '상담 내용',
+            time: enriched.datetime.split(' ')[1],
+            date: enriched.datetime.split(' ')[0],
+          };
+        });
+        setConsultationHistory(fallbackData);
+      } finally {
+        setIsLoadingConsultations(false);
+      }
+    };
+    loadConsultations();
   }, []);
 
   const handleConsultationClick = (consultation: any) => {
@@ -95,36 +141,23 @@ export default function DashboardPage() {
     setIsConsultationModalOpen(true);
   };
 
-  const handleAnnouncementClick = (announcement: any) => {
+  const handleAnnouncementClick = async (announcement: any) => {
     setSelectedAnnouncement(announcement);
     setIsAnnouncementModalOpen(true);
-    
-    // 조회수 증가
-    setAnnouncements(prev => {
-      const updatedAnnouncements = prev.map(n =>
-        n.id === announcement.id ? { ...n, views: n.views + 1 } : n
-      );
-      
-      // LocalStorage 전체 공지사항 업데이트
-      const savedNotices = localStorage.getItem('notices');
-      if (savedNotices) {
-        try {
-          const allNotices = JSON.parse(savedNotices);
-          const updatedAllNotices = allNotices.map((n: any) =>
-            n.id === announcement.id ? { ...n, views: n.views + 1 } : n
-          );
-          localStorage.setItem('notices', JSON.stringify(updatedAllNotices));
-          
-          // 고정 공지사항만 필터링해서 저장
-          const pinnedNotices = updatedAllNotices.filter((n: any) => n.pinned);
-          localStorage.setItem('pinnedAnnouncements', JSON.stringify(pinnedNotices));
-        } catch (e) {
-          console.error('Failed to update views', e);
-        }
-      }
-      
-      return updatedAnnouncements;
-    });
+
+    // ⭐ 조회수 증가 - API 호출 (Real 모드) 또는 Mock 데이터 업데이트
+    const result = await incrementViewCount(announcement.id);
+
+    // UI 상태 업데이트
+    const newViewCount = result?.viewCount ?? announcement.views + 1;
+    setAnnouncements(prev =>
+      prev.map(n =>
+        n.id === announcement.id ? { ...n, views: newViewCount } : n
+      )
+    );
+
+    // selectedAnnouncement도 업데이트
+    setSelectedAnnouncement({ ...announcement, views: newViewCount });
   };
 
   const handleNoticeClick = () => {

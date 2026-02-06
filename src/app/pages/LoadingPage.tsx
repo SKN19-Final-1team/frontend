@@ -148,7 +148,7 @@ export default function LoadingPage() {
       setProgress(100);
       setCurrentStep(3);
       
-      // 페이드아웃 후 이동 (1.2초로 빠르게)
+      // 페이드아웃 후 이동 (0.8초로 빠르게 조정)
       setIsFadingOut(true);
       setTimeout(() => {
         sessionStorage.setItem('fromLoading', 'true');
@@ -160,7 +160,7 @@ export default function LoadingPage() {
             educationType: educationType
           }
         });
-      }, 1200);
+      }, 800);
     };
 
     window.addEventListener('llmAnalysisComplete', handleComplete);
@@ -178,7 +178,7 @@ export default function LoadingPage() {
             educationType: educationType
           }
         });
-      }, 1200);
+      }, 800);
     }, 10000);
 
     return () => {

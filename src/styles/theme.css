@@ -358,6 +358,20 @@
     -moz-user-select: text;
     -ms-user-select: text;
   }
+  
+  /* ⭐ 대기콜 긴급 카드 배경 깜빡임 (텍스트는 그대로) */
+  @keyframes urgent-blink {
+    0%, 100% {
+      background-color: #FFF5F5;
+    }
+    50% {
+      background-color: #FFDDDD;
+    }
+  }
+  
+  .animate-urgent-blink {
+    animation: urgent-blink 1.5s ease-in-out infinite;
+  }
 }
 
 /* ==================== 기존 스타일 ==================== */

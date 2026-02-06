@@ -6,22 +6,11 @@ import { Label } from '../components/ui/label';
 import { useState, useEffect } from 'react';
 import ChangePasswordModal from '../components/modals/ChangePasswordModal';
 import { showSuccess, showError } from '@/utils/toast';
+import { badgesData, monthlyStatsData } from '@/data/mock';
 
-const badges = [
-  { id: 1, name: 'FCR 마스터', color: '#FBBC04' },
-  { id: 2, name: '스피드 레이서', color: '#0047AB' },
-  { id: 3, name: '감정 케어', color: '#34A853' },
-  { id: 4, name: '완벽주의자', color: '#9C27B0' },
-  { id: 5, name: '시뮬 마니아', color: '#FF6B35' },
-];
-
-const monthlyStats = [
-  { label: '상담 완료', value: '127건', comparison: '팀 평균 대비 +15%', status: 'good' },
-  { label: 'FCR', value: '94%', comparison: '목표: 90%', status: 'good' },
-  { label: '평균 통화', value: '4분 32초', comparison: '팀 평균: 5분 10초', status: 'good' },
-  { label: '후처리 시간', value: '2분 15초', comparison: '목표: 3분', status: 'good' },
-  { label: '감정 전환율', value: '82%', comparison: '목표: 75%', status: 'good' },
-];
+// ⭐ Mock 데이터에서 가져오기
+const badges = badgesData;
+const monthlyStats = monthlyStatsData;
 
 export default function ProfilePage() {
   const employeeName = localStorage.getItem('employeeName') || '홍길동';

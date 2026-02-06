@@ -1,14 +1,17 @@
-import { 
-  Home, 
-  Phone, 
-  BookOpen, 
+import {
+  Home,
+  Phone,
+  BookOpen,
   Users,
   BarChart3,
   Settings,
-  Megaphone
+  Megaphone,
+  Database,
+  FlaskConical
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { DEV_MODE, USE_MOCK_DATA, toggleMockMode } from '@/config/mockConfig';
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -109,6 +112,33 @@ export default function Sidebar({ isExpanded, onMouseEnter, onMouseLeave }: Side
                 </button>
               );
             })}
+          </>
+        )}
+
+        {/* ⭐ Mock/Real 토글 버튼 (개발자 모드에서만 표시) */}
+        {DEV_MODE && (
+          <>
+            <div className="h-px bg-[#E0E0E0] my-3"></div>
+            <button
+              onClick={toggleMockMode}
+              className={`
+                w-full h-11 px-3 rounded-md flex items-center gap-3 transition-all overflow-hidden whitespace-nowrap
+                ${USE_MOCK_DATA
+                  ? 'bg-[#FFF3E0] text-[#E65100] hover:bg-[#FFE0B2]'
+                  : 'bg-[#E8F5E9] text-[#2E7D32] hover:bg-[#C8E6C9]'
+                }
+              `}
+              title={!isExpanded ? (USE_MOCK_DATA ? 'Mock 모드' : 'Real DB') : ''}
+            >
+              {USE_MOCK_DATA ? (
+                <FlaskConical className="w-5 h-5 flex-shrink-0" />
+              ) : (
+                <Database className="w-5 h-5 flex-shrink-0" />
+              )}
+              <span className={`text-sm font-medium transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 w-0'}`}>
+                {USE_MOCK_DATA ? 'Mock 모드' : 'Real DB'}
+              </span>
+            </button>
           </>
         )}
       </nav>

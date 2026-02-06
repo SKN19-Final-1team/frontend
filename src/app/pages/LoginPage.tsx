@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { employeesData } from '../../data/mockData';
+import { employeesData } from '@/data/mock';
 
 export default function LoginPage() {
   const navigate = useNavigate();

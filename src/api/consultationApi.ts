@@ -13,6 +13,9 @@ import type {
   MockAfterCallWorkData
 } from '@/types/consultation';
 
+// ⭐ USE_MOCK_DATA를 re-export (다른 컴포넌트에서 사용 가능하도록)
+export { USE_MOCK_DATA };
+
 // ========================================
 // 1. Mock 데이터 정의
 // ========================================
@@ -37,7 +40,7 @@ export const MOCK_AFTER_CALL_WORK_DATA: MockAfterCallWorkData = {
   },
   similarCase: {
     category: '카드분실',
-    summary: '2024-12-28 처리 사례. 고객 카드 분실 신고 후 재발급 처리. 해외 여행 전 긴급 배송 요청하여 익일 배송으로 변경 처리.',
+    summary: '2024-12-28 처리 사례. 고객 카드 분실 신고 후 재발급 처리. 해외 여행 전 긴급 배송 요청하여 익일 배송으로 ��경 처리.',
   },
   callTranscript: [
     { speaker: 'customer', message: '안녕하세요, 카드를 분실했어요.', timestamp: '14:32' },
@@ -97,11 +100,11 @@ export function loadPendingConsultation(): PendingConsultation | null {
  */
 export function loadLLMAnalysisResult(): LLMAnalysisResult | null {
   try {
-    const data = localStorage.getItem('llmAnalysisResult');
+    const data = localStorage.getItem('llmApiResult');
     if (!data) return null;
     return JSON.parse(data) as LLMAnalysisResult;
   } catch (error) {
-    console.error('❌ llmAnalysisResult 로드 실패:', error);
+    console.error('❌ llmApiResult 로드 실패:', error);
     return null;
   }
 }
@@ -262,31 +265,62 @@ export function loadAfterCallWorkData(): MockAfterCallWorkData {
 
 /**
  * 상담 데이터를 DB에 저장
- * Mock/Real 분기 처리
+ *
+ * ⭐ [v24] 저장 분기 로직:
+ * - Mock 모드 (USE_MOCK_DATA = true): Mock 저장 (DB 저장 안함)
+ * - Real 모드 (USE_MOCK_DATA = false):
+ *   - 교육 모드 (isSimulationMode = true): Mock 저장 (simulation_results는 별도 API에서 처리)
+ *   - 대기콜 (isDirectIncoming = false): Mock 저장 (DB 저장 안함, 세션만 초기화)
+ *   - 다이렉트콜 + 실전 모드: Real DB 저장 (consultations 테이블)
+ *
+ * @param data - 저장할 상담 데이터
+ * @param isDirectIncoming - 다이렉트콜 여부 (true: 다이렉트콜, false: 대기콜/시나리오)
+ * @param isSimulationMode - 교육 모드 여부 (true: 기본교육/우수사례 교육)
  */
 export async function saveConsultation(
-  data: SaveConsultationRequest
+  data: SaveConsultationRequest,
+  isDirectIncoming: boolean = false,
+  isSimulationMode: boolean = false
 ): Promise<ApiResponse> {
-  if (USE_MOCK_DATA) {
-    // Mock: 콘솔 로그 + 1초 대기
-    console.log('🎭 Mock 저장 (실제 API 호출 안 함):');
+  // ⭐ [v24] Mock 저장 조건:
+  // 1. Mock 모드
+  // 2. Real 모드 + 대기콜
+  // 3. Real 모드 + 교육 모드 (기본교육/우수사례 - simulation_results는 별도 API)
+  const shouldUseMockSave = USE_MOCK_DATA || !isDirectIncoming || isSimulationMode;
+
+  if (shouldUseMockSave) {
+    // Mock 저장: 콘솔 로그 + 짧은 대기 (실제 DB 저장 안 함)
+    let reason: string;
+    if (USE_MOCK_DATA) {
+      reason = 'Mock 모드';
+    } else if (isSimulationMode) {
+      reason = '교육 모드 (simulation_results는 별도 저장)';
+    } else {
+      reason = '대기콜 (시나리오 기반)';
+    }
+
+    console.log(`🎭 Mock 저장 - ${reason} (consultations DB 저장 안 함):`);
     console.log('📦 저장할 데이터:', data);
-    
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     return {
       success: true,
-      message: 'Mock 저장 완료',
+      message: `Mock 저장 완료 (${reason})`,
       data: { consultationId: data.consultationId },
     };
   }
 
-  // ✅ Real: FastAPI 호출
-  console.log('🔗 실제 API 호출: POST /api/consultations');
+  // ✅ Real DB 저장: 실전 모드 + 다이렉트콜만 해당
+  const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+  console.log('🔗 [실전 다이렉트콜] 실제 API 호출: POST /api/v1/consultations');
+
+  // ⭐ [v24] 백엔드 스키마가 Frontend와 동일하므로 변환 불필요
+  // Frontend/Backend 공통: { stepNumber, documentId, title, used, viewCount }
   console.log('📦 요청 데이터:', data);
 
   try {
-    const response = await fetch('/api/consultations', {
+    const response = await fetch(`${API_BASE_URL}/consultations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -295,12 +329,15 @@ export async function saveConsultation(
     });
 
     if (!response.ok) {
-      throw new Error(`API 오류: ${response.status} ${response.statusText}`);
+      // 422 에러 등의 경우 상세 메시지 출력
+      const errorBody = await response.text();
+      console.error('❌ API 에러 상세:', errorBody);
+      throw new Error(`API 오류: ${response.status} ${response.statusText} - ${errorBody}`);
     }
 
     const result = await response.json();
-    console.log('✅ 저장 성공:', result);
-    
+    console.log('✅ [실전 다이렉트콜] DB 저장 성공:', result);
+
     return {
       success: true,
       data: result,
@@ -315,7 +352,319 @@ export async function saveConsultation(
 }
 
 // ========================================
-// 5. 유사 상담 조회 API (선택)
+// 5. 상담 목록 조회 API
+// ========================================
+
+const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+
+export interface ConsultationItem {
+  id: string;
+  agent: string;
+  agentId?: string;
+  customer: string;
+  customerId?: string;
+  category: string;
+  categoryMain?: string;
+  categorySub?: string;
+  status: string;
+  content: string;
+  datetime: string;
+  duration: string;
+  isBestPractice?: boolean;
+  isSimulation?: boolean;
+  fcr?: boolean;
+  memo?: string;
+  team?: string;
+}
+
+interface ConsultationListResponse {
+  success: boolean;
+  data: ConsultationItem[];
+  total: number;
+  message: string;
+}
+
+// ⭐ 상담 상세 정보 인터페이스
+export interface ConsultationDetail {
+  // 기본 정보
+  id: string;
+  customer_id: string;
+  agent_id: string;
+  status: string;
+  category_main: string;
+  category_sub: string;
+  title: string;
+
+  // 시간 정보
+  call_date: string;
+  call_time: string;
+  call_end_time?: string;
+  call_duration: string;
+  acw_duration?: string;
+
+  // 상담 내용
+  ai_summary: string;
+  agent_notes?: string;
+  transcript?: { messages: Array<{ speaker: string; message: string; timestamp: string }> };
+  processing_timeline?: Array<{ time: string; action: string; category?: string | null }>;
+
+  // 감정/만족도
+  sentiment?: string;
+  emotion_score?: number;
+  satisfaction_score?: number;
+  feedback_text?: string;
+  feedback_emotions?: string[];
+
+  // 후속 처리
+  follow_up_schedule?: string;
+  transfer_department?: string;
+  transfer_notes?: string;
+
+  // 참조 문서
+  referenced_documents?: Array<{ doc_id: string; doc_type: string; title: string; used: boolean }>;
+
+  // 녹취
+  recording_file_path?: string;
+  recording_duration?: string;
+  recording_file_size?: number;
+
+  // FCR
+  fcr?: boolean;
+  is_best_practice?: boolean;
+
+  // 고객 정보 (JOIN)
+  customer_name: string;
+  customer_phone?: string;
+  customer_birth_date?: string;
+  customer_address?: string;
+  customer_type?: string;
+
+  // 상담사 정보 (JOIN)
+  agent_name: string;
+  agent_team?: string;
+
+  // 시간 정보
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface ConsultationDetailResponse {
+  success: boolean;
+  data: ConsultationDetail;
+  message: string;
+}
+
+/**
+ * 상담 목록 조회
+ *
+ * @param options - 필터 옵션
+ * @returns 상담 목록
+ */
+export async function fetchConsultations(options?: {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  category?: string;
+  agentId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}): Promise<ConsultationItem[]> {
+  // Mock 데이터 import
+  const { consultationsData } = await import('@/data/mock');
+
+  if (USE_MOCK_DATA) {
+    console.log('[Mock] Fetching consultations:', options);
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        let data = [...consultationsData];
+
+        // 필터 적용
+        if (options?.status && options.status !== '전체') {
+          data = data.filter(c => c.status === options.status);
+        }
+        if (options?.category) {
+          data = data.filter(c => c.category.includes(options.category));
+        }
+
+        // 정렬 (최신순)
+        data.sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime());
+
+        // 페이지네이션
+        const offset = options?.offset || 0;
+        const limit = options?.limit || 100;
+        data = data.slice(offset, offset + limit);
+
+        resolve(data as ConsultationItem[]);
+      }, 300);
+    });
+  }
+
+  // Real 모드: FastAPI 백엔드 호출
+  try {
+    console.log('[API] Fetching consultations from backend...');
+
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', String(options.limit));
+    if (options?.offset) params.append('offset', String(options.offset));
+    if (options?.status && options.status !== '전체') params.append('status', options.status);
+    if (options?.category) params.append('category', options.category);
+    if (options?.agentId) params.append('agent_id', options.agentId);
+    if (options?.dateFrom) params.append('date_from', options.dateFrom);
+    if (options?.dateTo) params.append('date_to', options.dateTo);
+
+    const response = await fetch(`${API_BASE_URL}/consultations?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error('[API Error] Failed to fetch consultations:', response.status);
+      // 실패 시 Mock 데이터로 폴백
+      return consultationsData as ConsultationItem[];
+    }
+
+    const result: ConsultationListResponse = await response.json();
+    console.log('[API] Consultations fetched:', result.data.length, '건');
+    return result.data;
+  } catch (error) {
+    console.error('[API Error] fetchConsultations:', error);
+    // 에러 시 Mock 데이터로 폴백
+    return consultationsData as ConsultationItem[];
+  }
+}
+
+// ========================================
+// 6. 상담 상세 조회 API
+// ========================================
+
+/**
+ * 상담 상세 조회 (모달용)
+ */
+export async function fetchConsultationDetail(consultationId: string): Promise<ConsultationDetail | null> {
+  if (USE_MOCK_DATA) {
+    console.log('[Mock] Fetching consultation detail:', consultationId);
+    // Mock에서는 null 반환하여 기존 하드코딩 데이터 사용
+    return null;
+  }
+
+  try {
+    console.log('[API] Fetching consultation detail:', consultationId);
+    const response = await fetch(`${API_BASE_URL}/consultations/${consultationId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      console.error('[API Error] Failed to fetch consultation detail:', response.status);
+      return null;
+    }
+
+    const result: ConsultationDetailResponse = await response.json();
+    console.log('[API] Consultation detail fetched:', result.data.id);
+    return result.data;
+  } catch (error) {
+    console.error('[API Error] fetchConsultationDetail:', error);
+    return null;
+  }
+}
+
+// ========================================
+// 7. 페이지네이션 지원 상담 목록 조회
+// ========================================
+
+interface PaginatedConsultationsResult {
+  data: ConsultationItem[];
+  total: number;
+  hasMore: boolean;
+}
+
+/**
+ * 페이지네이션 지원 상담 목록 조회
+ * - 무한 스크롤에서 사용
+ * - total과 hasMore 정보 포함
+ */
+export async function fetchConsultationsPaginated(options?: {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  category?: string;
+  agentId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}): Promise<PaginatedConsultationsResult> {
+  const { consultationsData } = await import('@/data/mock');
+  const limit = options?.limit || 50;
+  const offset = options?.offset || 0;
+
+  if (USE_MOCK_DATA) {
+    console.log('[Mock] Fetching consultations paginated:', options);
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        let data = [...consultationsData];
+
+        // 필터 적용
+        if (options?.status && options.status !== '전체') {
+          data = data.filter(c => c.status === options.status);
+        }
+
+        const total = data.length;
+
+        // 정렬 (최신순)
+        data.sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime());
+
+        // 페이지네이션
+        data = data.slice(offset, offset + limit);
+
+        resolve({
+          data: data as ConsultationItem[],
+          total,
+          hasMore: offset + data.length < total,
+        });
+      }, 300);
+    });
+  }
+
+  // Real 모드: FastAPI 백엔드 호출
+  try {
+    console.log('[API] Fetching consultations paginated from backend...');
+
+    const params = new URLSearchParams();
+    params.append('limit', String(limit));
+    params.append('offset', String(offset));
+    if (options?.status && options.status !== '전체') params.append('status', options.status);
+    if (options?.category) params.append('category', options.category);
+    if (options?.agentId) params.append('agent_id', options.agentId);
+    if (options?.dateFrom) params.append('date_from', options.dateFrom);
+    if (options?.dateTo) params.append('date_to', options.dateTo);
+
+    const response = await fetch(`${API_BASE_URL}/consultations?${params.toString()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      console.error('[API Error] Failed to fetch consultations:', response.status);
+      return { data: [], total: 0, hasMore: false };
+    }
+
+    const result: ConsultationListResponse = await response.json();
+    console.log('[API] Consultations fetched:', result.data.length, '/', result.total);
+
+    return {
+      data: result.data,
+      total: result.total,
+      hasMore: offset + result.data.length < result.total,
+    };
+  } catch (error) {
+    console.error('[API Error] fetchConsultationsPaginated:', error);
+    return { data: [], total: 0, hasMore: false };
+  }
+}
+
+// ========================================
+// 8. 유사 상담 조회 API (선택)
 // ========================================
 
 /**

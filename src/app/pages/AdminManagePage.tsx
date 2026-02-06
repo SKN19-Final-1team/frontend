@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { UserPlus, Edit2, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { employeesData } from '../../data/mockData';
+import { employeesData } from '@/data/mock';
 import AddEmployeeModal from '../components/modals/AddEmployeeModal';
 import EditEmployeeModal from '../components/modals/EditEmployeeModal';
 import { Input } from '../components/ui/input';
@@ -9,6 +9,8 @@ import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Pagination } from '../components/ui/Pagination';
 import { toast } from 'sonner';
+import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee as deleteEmployeeApi } from '@/api/employeesApi';
+import { USE_MOCK_DATA } from '@/config/mockConfig';
 
 const itemsPerPage = 20; // 페이지당 표시할 사원 수
 
@@ -27,51 +29,103 @@ export default function AdminManagePage() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<any>(null);
 
-  // LocalStorage에서 사원 목록 불러오기
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ⭐ API에서 사원 목록 불러오기
   useEffect(() => {
-    const savedEmployees = localStorage.getItem('employees');
-    let employeesToUse = employeesData;
-
-    if (savedEmployees) {
+    const loadEmployees = async () => {
       try {
-        const parsedEmployees = JSON.parse(savedEmployees);
-        
-        // 50명보다 적으면 mockData로 초기화
-        if (parsedEmployees.length < 50) {
-          console.log('LocalStorage 데이터가 50명 미만입니다. mockData로 초기화합니다.');
-          employeesToUse = employeesData;
-        } else {
-          employeesToUse = parsedEmployees;
-        }
-      } catch (e) {
-        console.error('Failed to load employees', e);
-        employeesToUse = employeesData;
+        setIsLoading(true);
+        const data = await fetchEmployees(200); // 전체 사원 로드
+
+        // 팀 이름 정규화 및 기본값 설정
+        const normalizedEmployees = data.map((emp: any) => ({
+          ...emp,
+          team: (emp.team || emp.department || '').replace(/\s+/g, ''),
+          position: emp.position || emp.role || '사원',
+          joinDate: emp.joinDate || emp.hireDate || '',
+          phone: emp.phone || '',
+          status: emp.status || 'active',
+        }));
+
+        setEmployees(normalizedEmployees);
+        console.log(`[AdminManagePage] ${USE_MOCK_DATA ? 'Mock' : 'Real'} 데이터 로드: ${normalizedEmployees.length}명`);
+      } catch (error) {
+        console.error('Failed to load employees:', error);
+        // 폴백: Mock 데이터 사용
+        setEmployees(employeesData);
+      } finally {
+        setIsLoading(false);
       }
-    }
-
-    // 팀 이름 정규화 (띄워쓰기 제거: "상담 1팀" -> "상담1팀")
-    const normalizedEmployees = employeesToUse.map((emp: any) => ({
-      ...emp,
-      team: emp.team.replace(/\s+/g, ''), // 모든 공백 제거
-    }));
-
-    setEmployees(normalizedEmployees);
-    localStorage.setItem('employees', JSON.stringify(normalizedEmployees));
+    };
+    loadEmployees();
   }, []);
 
-  // 사원 목록이 변경될 때마다 LocalStorage에 저장
-  useEffect(() => {
-    localStorage.setItem('employees', JSON.stringify(employees));
-  }, [employees]);
+  // ⭐ 사원 추가 (API 호출)
+  const handleAddEmployee = async (newEmployee: any) => {
+    try {
+      const result = await createEmployee({
+        name: newEmployee.name,
+        email: newEmployee.email,
+        phone: newEmployee.phone,
+        role: newEmployee.position,
+        department: newEmployee.team,
+        hireDate: newEmployee.joinDate,
+        status: newEmployee.status || 'active',
+      });
 
-  // 사원 추가
-  const handleAddEmployee = (newEmployee: any) => {
-    setEmployees(prev => [newEmployee, ...prev]);
+      if (result) {
+        // Frontend 형식으로 변환하여 추가
+        const employeeWithDefaults = {
+          ...result,
+          team: result.team || result.department,
+          position: result.position || result.role,
+          joinDate: result.joinDate || result.hireDate,
+        };
+        setEmployees(prev => [employeeWithDefaults, ...prev]);
+        toast.success('사원이 추가되었습니다.', {
+          description: `${result.name} (${result.id})`,
+          duration: 3000,
+        });
+      } else {
+        toast.error('사원 추가에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Failed to add employee:', error);
+      toast.error('사원 추가 중 오류가 발생했습니다.');
+    }
   };
 
-  // 사원 수정
-  const handleEditEmployee = (updatedEmployee: any) => {
-    setEmployees(prev => prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp));
+  // ⭐ 사원 수정 (API 호출)
+  const handleEditEmployee = async (updatedEmployee: any) => {
+    try {
+      const result = await updateEmployee(updatedEmployee.id, {
+        name: updatedEmployee.name,
+        email: updatedEmployee.email,
+        phone: updatedEmployee.phone,
+        role: updatedEmployee.position,
+        department: updatedEmployee.team,
+        hireDate: updatedEmployee.joinDate,
+        status: updatedEmployee.status,
+      });
+
+      if (result) {
+        setEmployees(prev => prev.map(emp =>
+          emp.id === updatedEmployee.id
+            ? { ...emp, ...updatedEmployee, team: updatedEmployee.team, position: updatedEmployee.position }
+            : emp
+        ));
+        toast.success('사원 정보가 수정되었습니다.', {
+          description: `${updatedEmployee.name} (${updatedEmployee.id})`,
+          duration: 3000,
+        });
+      } else {
+        toast.error('사원 수정에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Failed to update employee:', error);
+      toast.error('사원 수정 중 오류가 발생했습니다.');
+    }
   };
 
   // 사원 삭제 확인 시작
@@ -80,16 +134,28 @@ export default function AdminManagePage() {
     setIsDeleteConfirmOpen(true);
   };
 
-  // 사원 삭제 실행
-  const handleDeleteEmployee = () => {
+  // ⭐ 사원 삭제 실행 (API 호출)
+  const handleDeleteEmployee = async () => {
     if (employeeToDelete) {
-      setEmployees(prev => prev.filter(emp => emp.id !== employeeToDelete.id));
-      toast.success('사원이 삭제되었습니다.', {
-        description: `${employeeToDelete.name} (${employeeToDelete.id})`,
-        duration: 3000,
-      });
-      setIsDeleteConfirmOpen(false);
-      setEmployeeToDelete(null);
+      try {
+        const success = await deleteEmployeeApi(employeeToDelete.id);
+
+        if (success) {
+          setEmployees(prev => prev.filter(emp => emp.id !== employeeToDelete.id));
+          toast.success('사원이 삭제되었습니다.', {
+            description: `${employeeToDelete.name} (${employeeToDelete.id})`,
+            duration: 3000,
+          });
+        } else {
+          toast.error('사원 삭제에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('Failed to delete employee:', error);
+        toast.error('사원 삭제 중 오류가 발생했습니다.');
+      } finally {
+        setIsDeleteConfirmOpen(false);
+        setEmployeeToDelete(null);
+      }
     }
   };
 

@@ -1,27 +1,106 @@
+import { Search, ChevronLeft, ChevronRight, FileText, Download, Filter, Eye, Loader2 } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { Search, Filter, Calendar, Download, Eye } from 'lucide-react';
-import { Input } from '../components/ui/input';
-import { Button } from '../components/ui/button';
-import { useState, useMemo } from 'react';
 import ConsultationDetailModal from '../components/modals/ConsultationDetailModal';
 import ExcelDownloadWarningModal from '../components/modals/ExcelDownloadWarningModal';
-import { consultationsData, categoryMapping } from '../../data/mockData';
+import { consultationsData, categoryMapping } from '@/data/mock';
 import { enrichConsultationData } from '../../data/consultationsDataHelper';
+import { fetchConsultationsPaginated, type ConsultationItem } from '@/api/consultationApi';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { DateRangePicker } from '../components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+
+const PAGE_SIZE = 50; // 한 번에 로드할 개수
 
 export default function ConsultationHistoryPage() {
-  const [consultations] = useState(consultationsData.map(c => {
-    const enriched = enrichConsultationData(c);
-    return {
-      ...enriched,
-      date: enriched.datetime.split(' ')[0],
-      time: enriched.datetime.split(' ')[1]
-    };
-  }));
+  const [consultations, setConsultations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  // ⭐ 페이지네이션: 초기 로드
+  const loadConsultations = useCallback(async (reset = false) => {
+    try {
+      if (reset) {
+        setIsLoading(true);
+        setConsultations([]);
+      } else {
+        setIsLoadingMore(true);
+      }
+
+      const offset = reset ? 0 : consultations.length;
+      const result = await fetchConsultationsPaginated({ limit: PAGE_SIZE, offset });
+
+      // 데이터 가공
+      const enrichedData = result.data.map((c: ConsultationItem) => {
+        const enriched = enrichConsultationData(c);
+        return {
+          ...enriched,
+          date: enriched.datetime?.split(' ')[0] || '',
+          time: enriched.datetime?.split(' ')[1] || ''
+        };
+      });
+
+      if (reset) {
+        setConsultations(enrichedData);
+      } else {
+        setConsultations(prev => [...prev, ...enrichedData]);
+      }
+
+      setTotalCount(result.total);
+      setHasMore(result.hasMore);
+    } catch (e) {
+      console.error('Failed to load consultations', e);
+      // fallback to mock
+      if (consultations.length === 0) {
+        const fallbackData = consultationsData.slice(0, PAGE_SIZE).map(c => {
+          const enriched = enrichConsultationData(c);
+          return {
+            ...enriched,
+            date: enriched.datetime.split(' ')[0],
+            time: enriched.datetime.split(' ')[1]
+          };
+        });
+        setConsultations(fallbackData);
+        setTotalCount(consultationsData.length);
+        setHasMore(consultationsData.length > PAGE_SIZE);
+      }
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }, [consultations.length]);
+
+  // ⭐ 초기 로드
+  useEffect(() => {
+    loadConsultations(true);
+  }, []);
+
+  // ⭐ 무한 스크롤 감지
+  const handleScroll = useCallback(() => {
+    const container = tableContainerRef.current;
+    if (!container || isLoadingMore || !hasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    // 스크롤이 하단 200px 이내에 도달하면 추가 로드
+    if (scrollHeight - scrollTop - clientHeight < 200) {
+      loadConsultations(false);
+    }
+  }, [isLoadingMore, hasMore, loadConsultations]);
+
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll]);
   const [selectedConsultation, setSelectedConsultation] = useState<any>(null);
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [isExcelDownloadWarningModalOpen, setIsExcelDownloadWarningModalOpen] = useState(false);
@@ -161,7 +240,9 @@ export default function ConsultationHistoryPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-base font-bold text-[#333333]">📋 상담 내역</h1>
-              <p className="text-[11px] text-[#666666] mt-0.5">전체 {filteredConsultations.length}건의 상담 내역</p>
+              <p className="text-[11px] text-[#666666] mt-0.5">
+                {isLoading ? '로딩 중...' : `전체 ${totalCount.toLocaleString()}건 중 ${filteredConsultations.length.toLocaleString()}건 표시`}
+              </p>
             </div>
             <Button className="bg-[#0047AB] hover:bg-[#003580] h-8 text-xs" onClick={() => setIsExcelDownloadWarningModalOpen(true)}>
               <Download className="w-3.5 h-3.5 mr-1.5" />
@@ -241,7 +322,7 @@ export default function ConsultationHistoryPage() {
 
         {/* Consultations Table */}
         <div className="flex-1 bg-white rounded-lg shadow-sm border border-[#E0E0E0] overflow-hidden flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto">
+          <div ref={tableContainerRef} className="flex-1 overflow-y-auto">
             <table className="w-full">
               <thead className="border-b-2 border-[#E0E0E0] sticky top-0 bg-white">
                 <tr>
@@ -321,6 +402,28 @@ export default function ConsultationHistoryPage() {
                     </td>
                   </tr>
                 ))}
+                {/* 로딩 표시 및 더보기 */}
+                {(isLoadingMore || hasMore) && (
+                  <tr>
+                    <td colSpan={11} className="py-4 text-center">
+                      {isLoadingMore ? (
+                        <div className="flex items-center justify-center">
+                          <Loader2 className="w-4 h-4 animate-spin text-[#0047AB] mr-2" />
+                          <span className="text-xs text-[#666666]">더 불러오는 중...</span>
+                        </div>
+                      ) : hasMore ? (
+                        <span className="text-xs text-[#999999]">스크롤하여 더 보기</span>
+                      ) : null}
+                    </td>
+                  </tr>
+                )}
+                {!hasMore && consultations.length > 0 && (
+                  <tr>
+                    <td colSpan={11} className="py-3 text-center">
+                      <span className="text-xs text-[#999999]">모든 데이터를 불러왔습니다</span>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

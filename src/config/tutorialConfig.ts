@@ -43,22 +43,22 @@ export const tutorialOffsets: Record<string, TooltipOffset> = {
   // ==========================================
 
   "call-action-button": {
-    offsetY: 0,
+    offsetY: 35,
     offsetX: 0, // ⭐ 초기화 - 기본 위치 사용
     useTargetSize: false,
     scaleWithViewport: true,
   },
 
   "waiting-call-list": {
-    offsetY: 0, // ⭐ 초기화 - 기본 위치 사용
+    offsetY: 35, // ⭐ 초기화 - 기본 위치 사용
     offsetX: 0, // ⭐ 초기화 - 기본 위치 사용
     useTargetSize: false,
     scaleWithViewport: true,
   },
 
   "scenario-selector": {
-    offsetY: -80, // 🎯 타겟 위로 80px
-    offsetX: 0, // 🎯 가로 중앙
+    offsetY: 0, // 🎯 타겟 위로 0px
+    offsetX: 100, // 🎯 가로 중앙
     useTargetSize: false, // 고정 픽셀 사용
     scaleWithViewport: true, // 4K에서 자동 확대
   },
@@ -96,36 +96,36 @@ export const tutorialOffsets: Record<string, TooltipOffset> = {
   },
 
   "info-cards-area": {
-    offsetY: 60, // 🎯 카드 영역이므로 여백 더 크게
+    offsetY: 0, // 🎯 카드 영역이므로 여백 더 크게
     offsetX: 0,
     useTargetSize: true,
     scaleWithViewport: true,
   },
 
   "next-cards-area": {
-    offsetY: 0,
+    offsetY: 50,
     offsetX: 0,
-    useTargetSize: true,
+    useTargetSize: false,
     scaleWithViewport: true,
   },
 
   "ai-search-area": {
-    offsetY: 0,
-    offsetX: 470,
+    offsetY: 45,
+    offsetX: 0,
     useTargetSize: false,
     scaleWithViewport: true,
   },
 
   "memo-area": {
     offsetY: 0,
-    offsetX: 470,
+    offsetX: 0,
     useTargetSize: false,
     scaleWithViewport: true,
   },
 
   "end-call-button": {
-    offsetY: 0,
-    offsetX: 170,
+    offsetY: 30,
+    offsetX: 0,
     useTargetSize: false,
     scaleWithViewport: true,
   },
@@ -148,36 +148,22 @@ export const tutorialOffsets: Record<string, TooltipOffset> = {
     scaleWithViewport: true,
   },
 
-  "acw-current-case": {
-    offsetY: 0,
-    offsetX: 0,
-    useTargetSize: true,
-    scaleWithViewport: true,
-  },
-
-  "acw-similar-cases": {
-    offsetY: 0,
-    offsetX: 0,
-    useTargetSize: true,
-    scaleWithViewport: true,
-  },
-
   "acw-document-area": {
     offsetY: 0,
-    offsetX: -250,
+    offsetX: 0,
     useTargetSize: true,
     scaleWithViewport: true,
   },
 
   "acw-memo-area": {
-    offsetY: 250,
+    offsetY: 70,
     offsetX: 0,
-    useTargetSize: true,
+    useTargetSize: false,
     scaleWithViewport: true,
   },
 
   "acw-save-button": {
-    offsetY: 320, // 🎯 버튼 아래 고정 여백
+    offsetY: 0, // 🎯 버튼 아래 고정 여백
     offsetX: -100,
     useTargetSize: false,
     scaleWithViewport: true,
