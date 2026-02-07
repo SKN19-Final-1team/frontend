@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { noticesData, consultationsData, frequentInquiriesData, employeesData, simulationsData, dashboardStatsData, weeklyGoalData, teamStatsData, frequentInquiriesDetailData } from '@/data/mock';
+import { noticesData, consultationsData, employeesData, simulationsData, dashboardStatsData, weeklyGoalData, teamStatsData, frequentInquiriesDetailData } from '@/data/mock';
+import { fetchFrequentInquiries, type FrequentInquiry } from '@/api/frequentInquiriesApi';
 import { enrichConsultationData } from '../../data/consultationsDataHelper';
 import ConsultationDetailModal from '../components/modals/ConsultationDetailModal';
 import AnnouncementModal from '../components/modals/AnnouncementModal';
@@ -13,7 +14,6 @@ import { fetchConsultations, type ConsultationItem } from '@/api/consultationApi
 
 // ⭐ Mock 데이터에서 가져오기
 const stats = dashboardStatsData;
-const frequentInquiries = frequentInquiriesData;
 
 // ⭐ 우수 상담사는 이제 컴포넌트 내부에서 API로 가져옴 (아래 useEffect 참조)
 
@@ -34,6 +34,8 @@ export default function DashboardPage() {
   const [isFrequentInquiryModalOpen, setIsFrequentInquiryModalOpen] = useState(false);
   const [consultationHistory, setConsultationHistory] = useState<any[]>([]);
   const [isLoadingConsultations, setIsLoadingConsultations] = useState(true);
+  const [frequentInquiries, setFrequentInquiries] = useState<FrequentInquiry[]>([]);
+  const [isLoadingFrequentInquiries, setIsLoadingFrequentInquiries] = useState(true);
 
   // 현재 사용자 권한 확인 (localStorage에서)
   const userRole = localStorage.getItem('userRole') || 'employee';
@@ -134,6 +136,23 @@ export default function DashboardPage() {
       }
     };
     loadConsultations();
+  }, []);
+
+  // ⭐ 자주 찾는 문의 로드 (API 또는 Mock - USE_MOCK_DATA에 따라 자동 전환)
+  useEffect(() => {
+    const loadFrequentInquiries = async () => {
+      try {
+        setIsLoadingFrequentInquiries(true);
+        const inquiries = await fetchFrequentInquiries(5);
+        setFrequentInquiries(inquiries);
+      } catch (e) {
+        console.error('Failed to load frequent inquiries', e);
+        setFrequentInquiries([]);
+      } finally {
+        setIsLoadingFrequentInquiries(false);
+      }
+    };
+    loadFrequentInquiries();
   }, []);
 
   const handleConsultationClick = (consultation: any) => {

@@ -30,16 +30,27 @@ export interface RAGResponse {
   docs?: Array<Record<string, unknown>>;
 }
 
+// ⭐ [v25] AI 고객 응답 타입 (교육 모드 TTS용)
+export interface CustomerResponseData {
+  text: string;
+  turn_number: number;
+  audio_url?: string;
+}
+
 export interface WebSocketMessage {
-  type: 'rag' | 'session' | 'stt';
-  data: RAGResponse | string;
+  type: 'rag' | 'session' | 'stt' | 'connected' | 'customer_response';
+  data: RAGResponse | string | CustomerResponseData;
   text?: string;  // STT 결과 텍스트
+  ws_session_id?: string;  // connected 메시지용
 }
 
 interface UseVoiceRecorderOptions {
   onRagResult?: (data: RAGResponse) => void;
   onSessionId?: (sessionId: string) => void;
   onSttResult?: (text: string) => void;  // ⭐ [v24] STT 결과 콜백
+  onCustomerResponse?: (data: CustomerResponseData) => void;  // ⭐ [v25] AI 고객 응답 콜백 (TTS)
+  onConnected?: (wsSessionId: string) => void;  // ⭐ [v25] WebSocket 연결 완료 콜백
+  wsEndpoint?: string;  // ⭐ [v25] WebSocket 엔드포인트 (교육: ws/edu, 실전: ws/call)
 }
 
 export const useVoiceRecorder = (options?: UseVoiceRecorderOptions) => {
@@ -161,8 +172,10 @@ export const useVoiceRecorder = (options?: UseVoiceRecorderOptions) => {
     try {
       console.log('[WebSocket] 연결 시작...');
 
-      // 웹소켓 연결
-      websocket.current = new WebSocket("ws://127.0.0.1:8000/api/v1/ws/call");
+      // ⭐ [v25] 웹소켓 연결 (교육: ws/edu, 실전: ws/call)
+      const endpoint = optionsRef.current?.wsEndpoint || "ws://127.0.0.1:8000/api/v1/ws/call";
+      console.log('[WebSocket] 엔드포인트:', endpoint);
+      websocket.current = new WebSocket(endpoint);
 
       websocket.current.onopen = () => {
         console.log('[WebSocket] 연결 성공');
@@ -185,11 +198,20 @@ export const useVoiceRecorder = (options?: UseVoiceRecorderOptions) => {
           const message = JSON.parse(event.data);
           console.log('[WebSocket] 메시지 수신:', message);
 
-          // 첫 번째 메시지: session_id (string)
+          // 첫 번째 메시지: session_id (string) - ws/call 호환
           if (typeof message === 'string') {
             console.log('[WebSocket] 세션 ID:', message);
             setSessionId(message);
             optionsRef.current?.onSessionId?.(message);
+            return;
+          }
+
+          // ⭐ [v25] WebSocket 연결 확인 (ws/edu에서 JSON으로 세션 ID 전송)
+          if (message.type === 'connected' && message.ws_session_id) {
+            console.log('[WebSocket] 연결 확인, 세션 ID:', message.ws_session_id);
+            setSessionId(message.ws_session_id);
+            optionsRef.current?.onSessionId?.(message.ws_session_id);
+            optionsRef.current?.onConnected?.(message.ws_session_id);
             return;
           }
 
@@ -203,6 +225,12 @@ export const useVoiceRecorder = (options?: UseVoiceRecorderOptions) => {
           if (message.type === 'rag' && message.data) {
             console.log('[WebSocket] RAG 결과 수신:', message.data);
             optionsRef.current?.onRagResult?.(message.data as RAGResponse);
+          }
+
+          // ⭐ [v25] AI 고객 응답 메시지 (교육 모드 TTS)
+          if (message.type === 'customer_response' && message.data) {
+            console.log('[WebSocket] AI 고객 응답 수신:', message.data);
+            optionsRef.current?.onCustomerResponse?.(message.data as CustomerResponseData);
           }
         } catch (err) {
           console.error('[WebSocket] 메시지 파싱 에러:', err);
@@ -230,10 +258,20 @@ export const useVoiceRecorder = (options?: UseVoiceRecorderOptions) => {
     }
   }, [processAudio, stop]);
 
+  // ⭐ [v25] JSON 메시지 전송 (init_simulation, text_message 등)
+  const sendMessage = useCallback((data: Record<string, unknown>) => {
+    if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
+      websocket.current.send(JSON.stringify(data));
+      console.log('[WebSocket] JSON 메시지 전송:', data);
+    } else {
+      console.warn('[WebSocket] 전송 실패 - 연결되지 않음');
+    }
+  }, []);
+
   // 컴포넌트 언마운트 시 강제 종료
   useEffect(() => {
     return () => stop();
   }, [stop]);
 
-  return { start, stop, isRecording, wsStatus, sessionId };
+  return { start, stop, sendMessage, isRecording, wsStatus, sessionId };
 };

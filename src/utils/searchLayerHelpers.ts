@@ -6,6 +6,7 @@ import { addTimestampToCard } from './timeFormatter';
 export interface SearchHandlerOptions {
   query: string;
   isCallActive: boolean;
+  isDirectIncoming: boolean;
   setSearchHistory: (history: any[]) => void;
   setSearchResults: React.Dispatch<React.SetStateAction<ScenarioCard[][]>>;
   setConsultationReferences: React.Dispatch<React.SetStateAction<ScenarioCard[]>>;
@@ -26,6 +27,7 @@ export async function handleSearchExecution(options: SearchHandlerOptions) {
   const {
     query,
     isCallActive,
+    isDirectIncoming,
     setSearchHistory,
     setSearchResults,
     setConsultationReferences,
@@ -35,7 +37,7 @@ export async function handleSearchExecution(options: SearchHandlerOptions) {
     setIsSearchHistoryOpen
   } = options;
 
-  const result = await simulateSearch(query);
+  const result = await simulateSearch(query, isDirectIncoming, isCallActive);
 
   if (result.cards.length > 0) {
     // 1. ⭐ 검색 이력 저장 (항상 - 대기 중/통화 중 무관)
