@@ -98,8 +98,6 @@ export function getTraitColor(trait: string): { bg: string; text: string } {
 
     // 긍정적 특성 - 진한 블루
     'VIP 고객': { bg: '#FDF4E7', text: '#B8860B' },
-    'PREMIUM': { bg: '#F3E8FF', text: '#7C3AED' },
-    'GOLD': { bg: '#FDF4E7', text: '#B8860B' },
     '신용 관리 철저': { bg: '#E8F1FC', text: '#0047AB' },
     '계획적인 성향': { bg: '#E8F1FC', text: '#0047AB' },
     '기술 친화적': { bg: '#E8F1FC', text: '#0047AB' },
@@ -164,7 +162,6 @@ export function getTraitColor(trait: string): { bg: string; text: string } {
     '긴급': { bg: '#FEE2E2', text: '#DC2626' },         // 빨간색 계열
     '시간 민감': { bg: '#FEF3C7', text: '#D97706' },    // 주황색 계열
     '급함': { bg: '#FEE2E2', text: '#DC2626' },
-    '바쁨': { bg: '#FEF3C7', text: '#D97706' },
     '민감함': { bg: '#D4E3F3', text: '#003580' },
     '불안함': { bg: '#D4E3F3', text: '#003580' },
     '망설임': { bg: '#F5F5F5', text: '#666666' },

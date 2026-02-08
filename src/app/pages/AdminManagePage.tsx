@@ -7,7 +7,7 @@ import EditEmployeeModal from '../components/modals/EditEmployeeModal';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Pagination } from '../components/ui/Pagination';
+import { Pagination } from '../components/ui/pagination_component';
 import { toast } from 'sonner';
 import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee as deleteEmployeeApi } from '@/api/employeesApi';
 import { USE_MOCK_DATA } from '@/config/mockConfig';
