@@ -1,1 +1,1 @@
-export const API_BASE_URL = "https://estela-overmoist-unworldly.ngrok-free.dev/api/v1";
+export const API_BASE_URL = "https://api.callact.click/api/v1";

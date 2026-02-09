@@ -605,8 +605,8 @@ export default function RealTimeConsultationPage() {
 
   // ⭐ [v25] 교육 모드: ws/edu, 실전 모드: ws/call
   const wsEndpoint = isSimulationMode
-  ? "wss://estela-overmoist-unworldly.ngrok-free.dev/api/v1/ws/edu"
-  : "wss://estela-overmoist-unworldly.ngrok-free.dev/api/v1/ws/call";
+    ? "wss://api.callact.click/api/v1/ws/edu"   // 교육 모드
+    : "wss://api.callact.click/api/v1/ws/call";  // 실전 모드
 
   const { start: startRecording, stop: stopRecording, sendMessage, wsStatus, sessionId } = useVoiceRecorder({
     onRagResult: handleRagResult,
