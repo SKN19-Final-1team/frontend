@@ -39,6 +39,7 @@ import { useLayerNavigation } from '@/hooks/useLayerNavigation';
 import { useVoiceRecorder, type RAGResponse, type RAGCard } from '../hooks/useVoiceRecoders';
 import { simulateSearch, getSearchHistory, clearSearchHistory, saveSearchHistory, type SearchHistoryItem } from '@/utils/searchSimulator';
 import { LayerTransitionWrapper } from '@/app/components/consultation/LayerTransitionWrapper';
+import { API_BASE_URL } from '../../config/apiConfig';
 
 // Mock Data (기본값 - 통화 전)
 const defaultCustomerInfo = {
@@ -582,7 +583,7 @@ export default function RealTimeConsultationPage() {
         ttsAudioRef.current.pause();
         ttsAudioRef.current = null;
       }
-      const audio = new Audio(`http://127.0.0.1:8000${data.audio_url}`);
+      const audio = new Audio(`http://15.165.13.182:8000${data.audio_url}`);
       ttsAudioRef.current = audio;
       audio.play().catch(err => console.error('[TTS] 재생 실패:', err));
     }
@@ -1816,7 +1817,7 @@ export default function RealTimeConsultationPage() {
 
       console.log('🎓 [교육] 시뮬레이션 시작 API 호출:', { category: educationCategory, difficulty });
 
-      fetch('http://127.0.0.1:8000/api/v1/education/simulation/start', {
+      fetch(`${API_BASE_URL}/education/simulation/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category: educationCategory, difficulty }),
@@ -1871,7 +1872,7 @@ export default function RealTimeConsultationPage() {
     console.log('📞 다이렉트 콜: 랜덤 고객 API 호출 + 웹소켓 RAG 연동');
 
     // 랜덤 고객 정보 API 호출
-    fetch('http://127.0.0.1:8000/api/v1/customers/random')
+    fetch(`${API_BASE_URL}/customers/random`)
       .then(res => res.json())
       .then(response => {
         if (response.success && response.data) {
@@ -1908,7 +1909,7 @@ export default function RealTimeConsultationPage() {
 
           // 최근 상담 내역 API 호출
           if (customer.id) {
-            fetch(`http://127.0.0.1:8000/api/v1/customers/${customer.id}/consultations?limit=3`)
+            fetch(`${API_BASE_URL}/customers/${customer.id}/consultations?limit=3`)
               .then(res => res.json())
               .then(historyResponse => {
                 if (historyResponse.success && historyResponse.data && historyResponse.data.length > 0) {
@@ -2237,7 +2238,7 @@ export default function RealTimeConsultationPage() {
         console.log('🤖 [ACW] LLM 분석 API 호출 시작 (session_id:', dialogueSessionId, ')');
 
         // ⭐ 팀원이 작성한 기존 followup API 사용
-        const response = await fetch('http://127.0.0.1:8000/api/v1/followup', {
+        const response = await fetch(`${API_BASE_URL}/followup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -5,9 +5,9 @@ import { searchMockData, getDocumentNames } from '@/data/searchMockData';
 import { ScenarioCard } from '@/data/scenarios';
 import { addTimestampToCard, updateCardDisplayTime } from './timeFormatter';
 import { USE_MOCK_DATA } from '@/config/mockConfig';
+import { API_BASE_URL } from './../config/apiConfig'
 
 // RAG API 기본 URL
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
 /**
  * 검색 결과 타입

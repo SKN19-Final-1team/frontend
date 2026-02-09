@@ -12,6 +12,8 @@ import type {
   LLMAnalysisResult,
   MockAfterCallWorkData
 } from '@/types/consultation';
+import { API_BASE_URL } from './../config/apiConfig'
+
 
 // ⭐ USE_MOCK_DATA를 re-export (다른 컴포넌트에서 사용 가능하도록)
 export { USE_MOCK_DATA };
@@ -312,7 +314,6 @@ export async function saveConsultation(
   }
 
   // ✅ Real DB 저장: 실전 모드 + 다이렉트콜만 해당
-  const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
   console.log('🔗 [실전 다이렉트콜] 실제 API 호출: POST /api/v1/consultations');
 
   // ⭐ [v24] 백엔드 스키마가 Frontend와 동일하므로 변환 불필요
@@ -354,8 +355,6 @@ export async function saveConsultation(
 // ========================================
 // 5. 상담 목록 조회 API
 // ========================================
-
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
 export interface ConsultationItem {
   id: string;

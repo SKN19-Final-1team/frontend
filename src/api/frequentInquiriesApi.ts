@@ -9,10 +9,9 @@
 import { USE_MOCK_DATA } from '@/config/mockConfig';
 import { frequentInquiriesData } from '@/data/mock';
 import { frequentInquiriesDetailData } from '@/data/frequentInquiriesDetail';
+import { API_BASE_URL } from '../config/apiConfig';
 
 // API 기본 URL
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
-
 export interface FrequentInquiry {
   id: number;
   keyword: string;
