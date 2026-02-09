@@ -184,7 +184,18 @@ export function TutorialGuide({
       targetElement.style.transition = 'box-shadow 0.3s ease';
       targetElement.style.boxShadow = `0 0 0 4px ${themeColor}40, 0 0 20px ${themeColor}60`;
       targetElement.style.borderRadius = '8px';
-      
+
+      // ⭐ 부모 overflow:hidden/auto 클리핑 방지 (최대 4단계 상위까지)
+      let parent = targetElement.parentElement;
+      for (let i = 0; i < 4 && parent; i++) {
+        const cs = getComputedStyle(parent);
+        if (cs.overflow !== 'visible' || cs.overflowX !== 'visible' || cs.overflowY !== 'visible') {
+          parent.dataset.tutorialOverflow = cs.overflow;
+          parent.style.overflow = 'visible';
+        }
+        parent = parent.parentElement;
+      }
+
       // ⭐ 즉시 표시 (delay 제거)
       setIsPositionCalculated(true);
     };
@@ -206,6 +217,15 @@ export function TutorialGuide({
         if (currentStepData.targetId === 'info-cards-area') {
           targetElement.style.padding = '';
           targetElement.style.margin = '';
+        }
+        // ⭐ 부모 overflow 복원
+        let parent = targetElement.parentElement;
+        for (let i = 0; i < 4 && parent; i++) {
+          if (parent.dataset.tutorialOverflow) {
+            parent.style.overflow = parent.dataset.tutorialOverflow;
+            delete parent.dataset.tutorialOverflow;
+          }
+          parent = parent.parentElement;
         }
       }
     };

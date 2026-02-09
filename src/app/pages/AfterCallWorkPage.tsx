@@ -144,6 +144,7 @@ export default function AfterCallWorkPage() {
           status: string;
           category: string;
           subcategory: string;
+          categoryRaw?: string;
           aiSummary: string;
           followUpTasks: string;
           handoffDepartment: string;
@@ -163,6 +164,7 @@ export default function AfterCallWorkPage() {
               status: llmResult.status || '완료',
               category: llmResult.category || '기타',
               subcategory: llmResult.subcategory || '기타',
+              categoryRaw: llmResult.categoryRaw || '',
               aiSummary: llmResult.aiSummary || '',
               followUpTasks: llmResult.followUpTasks || '',
               handoffDepartment: llmResult.handoffDepartment || '없음',
@@ -281,6 +283,9 @@ export default function AfterCallWorkPage() {
           subcategory: aiAnalysisData!.subcategory,
           handoffDepartment: aiAnalysisData!.handoffDepartment || '없음',
         }));
+        if (aiAnalysisData!.categoryRaw) {
+          setCategoryRaw(aiAnalysisData!.categoryRaw);
+        }
 
         console.log('✅ [ACW 로드] 대분류:', aiAnalysisData.category);
         console.log('✅ [ACW 로드] 중분류:', aiAnalysisData.subcategory);
@@ -392,6 +397,11 @@ export default function AfterCallWorkPage() {
           setAiSummary(llmData.aiSummary);
         }
 
+        // 세부 카테고리 업데이트
+        if (llmData.categoryRaw) {
+          setCategoryRaw(llmData.categoryRaw);
+        }
+
         // ⭐ [v25] 통화 시작 시간/통화 시간 로드 (타임스탬프 계산용)
         const evtStartTime = localStorage.getItem('consultationStartTime') || '';
         const evtCallTime = parseInt(localStorage.getItem('callTime') || '0', 10);
@@ -464,6 +474,7 @@ export default function AfterCallWorkPage() {
     handoffDepartment: '없음',
     handoffNotes: '',
   });
+  const [categoryRaw, setCategoryRaw] = useState<string>('');
   
   // ⭐ 고정된 중분류 15개 옵션
   const SUBCATEGORIES = [
@@ -784,9 +795,10 @@ export default function AfterCallWorkPage() {
     // "오늘 하루 보지 않기" 설정 확인
     const feedbackDontShowUntil = localStorage.getItem('feedbackDontShowUntil');
     const today = new Date().toDateString();
-    
-    // 오늘은 피드백을 보지 않기로 설정되어 있으면 바로 저장
+
+    // 오늘은 피드백을 보지 않기로 설정되어 있으면 바로 저장 (피드백 점수 없이)
     if (feedbackDontShowUntil === today) {
+      localStorage.removeItem('feedbackScores'); // 이전 피드백 점수 제거
       handleSaveACW();
     } else {
       // 피드백 모달 표시
@@ -827,6 +839,21 @@ export default function AfterCallWorkPage() {
         })))
       : undefined;
 
+    // ⭐ 피드백 점수 로드 (FeedbackModal에서 저장)
+    let feedbackScore: number | undefined;
+    let satisfactionScore: number | undefined;
+    try {
+      const feedbackScoresStr = localStorage.getItem('feedbackScores');
+      if (feedbackScoresStr) {
+        const scores = JSON.parse(feedbackScoresStr);
+        feedbackScore = scores.feedbackScore;
+        satisfactionScore = scores.satisfactionScore;
+        console.log('📊 [후처리] 피드백 점수 적용:', { feedbackScore, satisfactionScore });
+      }
+    } catch (e) {
+      console.warn('⚠️ [후처리] 피드백 점수 파싱 실패');
+    }
+
     const acwData: SaveConsultationRequest = {
       consultationId: pageData.callInfo.id,
       employeeId: localStorage.getItem('employeeId') || 'EMP-001',  // ⭐ Phase A: employeeId 추가
@@ -835,6 +862,7 @@ export default function AfterCallWorkPage() {
       title: formData.title,
       status: formData.status,
       category: formData.category,
+      categoryRaw: categoryRaw || undefined,
       aiSummary: aiSummary,
       memo: memo,
       transcript: transcriptJson,  // ⭐ [v24] 상담 전문 (화자분리 결과) 추가
@@ -854,6 +882,9 @@ export default function AfterCallWorkPage() {
         action: item.action,
         category: item.categoryRaw ? `${item.categoryRaw.mainCategory} > ${item.categoryRaw.subCategory}` : null
       })),
+      // ⭐ 피드백 점수 (FeedbackModal에서 계산된 값)
+      feedbackScore,
+      satisfactionScore,
     };
 
     try {
@@ -893,6 +924,8 @@ export default function AfterCallWorkPage() {
       localStorage.removeItem('llmApiResult');
       localStorage.removeItem('consultationTranscript');
       localStorage.removeItem('useLLMScript');
+      localStorage.removeItem('feedbackScores');
+      localStorage.removeItem('educationScores');
 
       // 4. ⭐ [v24] RAG 관련 데이터 삭제 (있다면)
       localStorage.removeItem('ragSessionId');

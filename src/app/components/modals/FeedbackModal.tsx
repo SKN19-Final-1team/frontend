@@ -254,6 +254,16 @@ export default function FeedbackModal({
       const today = new Date().toDateString();
       localStorage.setItem('feedbackDontShowUntil', today);
     }
+
+    // ⭐ 피드백 점수를 localStorage에 저장 (handleSaveACW에서 읽어서 DB에 저장)
+    const satisfactionScore = totalScore >= 90 ? 5 : totalScore >= 80 ? 4 : totalScore >= 70 ? 3 : totalScore >= 60 ? 2 : 1;
+    localStorage.setItem('feedbackScores', JSON.stringify({
+      feedbackScore: totalScore,
+      satisfactionScore,
+      feedbackText: feedbackData.feedback || '',
+    }));
+    console.log('📊 [FeedbackModal] 피드백 점수 저장:', { totalScore, satisfactionScore });
+
     onConfirm();
   };
 

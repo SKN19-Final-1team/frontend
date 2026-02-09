@@ -480,12 +480,18 @@ export default function RealTimeConsultationPage() {
       setRagGuidanceScript(data.guidanceScript);
     }
 
-    // ⭐ 키워드 추출 (routing에서) - displayedKeywords도 함께 업데이트
+    // ⭐ 키워드 추출 (routing.matched에서) - displayedKeywords도 함께 업데이트
     if (data.routing) {
       const routing = data.routing as Record<string, unknown>;
+      const matched = (routing.matched || {}) as Record<string, unknown>;
       const keywords: string[] = [];
-      if (routing.card_name) keywords.push(String(routing.card_name));
-      if (routing.intent) keywords.push(String(routing.intent));
+      // Backend sends: matched.card_names[], matched.actions[], matched.payments[], matched.weak_intents[]
+      if (Array.isArray(matched.card_names)) keywords.push(...matched.card_names.map(String));
+      if (Array.isArray(matched.actions)) keywords.push(...matched.actions.map(String));
+      if (Array.isArray(matched.payments)) keywords.push(...matched.payments.map(String));
+      // Legacy fallback: 이전 형식 호환
+      if (!keywords.length && routing.card_name) keywords.push(String(routing.card_name));
+      if (!keywords.length && routing.intent) keywords.push(String(routing.intent));
       if (keywords.length > 0) {
         // incomingKeywords 업데이트
         setIncomingKeywords(prev => {
@@ -2228,6 +2234,7 @@ export default function RealTimeConsultationPage() {
             handoffDepartment: result.summary.transfer_dep || '없음',
             handoffNotes: result.summary.transfer_note || '',
             handledCategories: result.summary.handled_categories || [],
+            categoryRaw: result.summary.category_raw || '',
             evaluation: result.evaluation || null,
             script: result.script || null
           };
