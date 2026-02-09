@@ -451,9 +451,10 @@ export default function DashboardPage() {
                     <div 
                       key={sim.id}
                       className="p-3 rounded-lg border-2 border-[#E0E0E0] hover:border-[#0047AB] hover:shadow-md cursor-pointer transition-all"
+                      onClick={() => navigate('/simulation')}
                     >
                       <div className="flex items-start gap-2 mb-2">
-                        <div 
+                        <div
                           className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
                           style={{ backgroundColor: `${sim.color}15` }}
                         >
@@ -468,7 +469,7 @@ export default function DashboardPage() {
                           </h3>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between pt-2 border-t border-[#E0E0E0]">
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
@@ -483,9 +484,20 @@ export default function DashboardPage() {
                             {sim.duration}
                           </span>
                         </div>
-                        <button 
-                          className="px-2 py-1 rounded text-[10px] font-semibold text-white flex items-center gap-1"
+                        <button
+                          className="px-2 py-1 rounded text-[10px] font-semibold text-white flex items-center gap-1 hover:opacity-90"
                           style={{ backgroundColor: sim.color }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sessionStorage.setItem('simulationMode', 'true');
+                            sessionStorage.setItem('educationType', 'basic');
+                            sessionStorage.setItem('scenarioId', sim.scenarioId);
+                            sessionStorage.setItem('educationCategory', sim.category);
+                            localStorage.removeItem('isGuideModeActive');
+                            navigate('/consultation/live', {
+                              state: { mode: 'simulation', educationType: 'basic', scenarioId: sim.scenarioId }
+                            });
+                          }}
                         >
                           <Play className="w-2.5 h-2.5" />
                           시작

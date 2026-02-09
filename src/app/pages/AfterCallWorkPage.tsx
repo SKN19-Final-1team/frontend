@@ -989,11 +989,23 @@ export default function AfterCallWorkPage() {
           <div id="acw-transcript" className="flex-shrink-0 mb-3 flex flex-col" style={{ height: '45%' }}>
             <h3 className="py-2 border-b border-[#E0E0E0] text-xs font-bold text-[#333333] mb-2">상담 전문</h3>
             <div className="bg-white rounded-lg p-2.5 flex-1 overflow-y-auto">
+              <style>{`
+                @keyframes chatBubbleIn {
+                  from { opacity: 0; transform: translateY(8px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+              `}</style>
               <div className="space-y-1.5">
                 {callTranscript.map((msg, index) => (
-                  <div key={index} className={`flex ${msg.speaker === 'agent' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    key={index}
+                    className={`flex ${msg.speaker === 'agent' ? 'justify-end' : 'justify-start'}`}
+                    style={{
+                      animation: `chatBubbleIn 0.3s ease-out ${Math.min(index * 0.06, 2)}s both`,
+                    }}
+                  >
                     <div className={`max-w-[80%] ${msg.speaker === 'agent' ? 'text-right' : 'text-left'}`}>
-                      <div 
+                      <div
                         className={`inline-block px-2 py-1 rounded-lg text-[10px] ${
                           msg.speaker === 'agent'
                             ? 'bg-[#0047AB] text-white rounded-tr-sm'
@@ -1304,13 +1316,14 @@ export default function AfterCallWorkPage() {
         />
       )}
 
-      {/* ⭐ Phase 8-2: 피드백 모달 */}
+      {/* ⭐ Phase 8-2: 피드백 모달 (교육 모드 분기) */}
       <FeedbackModal
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
         onConfirm={handleFeedbackConfirm}
         acwTimeSeconds={getCurrentAcwTime()}
         callTimeSeconds={parseInt(localStorage.getItem('consultationCallTime') || '0')}
+        educationType={isSimulationMode ? (sessionStorage.getItem('educationType') as 'basic' | 'advanced' | undefined) || 'basic' : undefined}
       />
 
       {/* ⭐ Phase 11: 참조 문서 전체보기 모달 */}

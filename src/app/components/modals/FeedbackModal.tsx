@@ -10,6 +10,9 @@ import {
   getAcwTimeMessage,
   getEmotionTransitionMessage,
   getAhtMessage,
+  getSimilarityMessage,
+  getMimicryMessage,
+  getMimicryGrade,
   EmotionAnalysis
 } from '../../../data/feedbackRules';
 
@@ -19,6 +22,7 @@ interface FeedbackModalProps {
   onConfirm: () => void;
   acwTimeSeconds?: number; // ⭐ 실제 후처리 시간 (초 단위)
   callTimeSeconds?: number; // ⭐ 통화 시간 (초 단위)
+  educationType?: 'basic' | 'advanced'; // ⭐ 교육 모드 ('basic'=기본 시나리오, 'advanced'=우수 사례)
 }
 
 // ⭐ LLM 평가 데이터 타입 정의
@@ -66,10 +70,34 @@ export default function FeedbackModal({
   onClose,
   onConfirm,
   acwTimeSeconds = 0,
-  callTimeSeconds = 0
+  callTimeSeconds = 0,
+  educationType
 }: FeedbackModalProps) {
+  const isEducationMode = !!educationType;
+  const isAdvancedMode = educationType === 'advanced';
   const [dontShowToday, setDontShowToday] = useState(false);
   const [showDetailScores, setShowDetailScores] = useState(false);
+
+  // ⭐ 교육 모드: 유사도 점수 로드 (localStorage 또는 mock)
+  const educationScores = useMemo(() => {
+    if (!isEducationMode) return null;
+    const stored = localStorage.getItem('educationScores');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        console.log('[FeedbackModal] 교육 점수 로드:', parsed);
+        return {
+          similarityScore: Math.min(parsed.similarityScore ?? 22, 30),
+          mimicryScore: isAdvancedMode ? Math.min(parsed.mimicryScore ?? 0, 100) : undefined,
+        };
+      } catch { /* fallback */ }
+    }
+    // Mock fallback
+    return {
+      similarityScore: 22,
+      mimicryScore: isAdvancedMode ? 68 : undefined,
+    };
+  }, [isOpen, isEducationMode, isAdvancedMode]);
 
   // ⭐ localStorage에서 LLM 평가 데이터 읽기
   const llmEvaluation = useMemo<LLMEvaluation | null>(() => {
@@ -166,11 +194,10 @@ export default function FeedbackModal({
   const ahtSeconds = actualCallTime + (acwTimeSeconds > 0 ? acwTimeSeconds : 0);
   const ahtDisplay = formatTime(ahtSeconds);
 
-  // ⭐ 총점 재계산 (후처리 시간 반영)
-  const totalScore = feedbackData.manualCompliance +
-                     feedbackData.customerGratitude +
-                     acwScore +
-                     feedbackData.emotionTransition;
+  // ⭐ 총점 재계산 (교육 모드 분기)
+  const totalScore = isEducationMode
+    ? feedbackData.manualCompliance + (educationScores?.similarityScore ?? 0) + acwScore
+    : feedbackData.manualCompliance + feedbackData.customerGratitude + acwScore + feedbackData.emotionTransition;
 
   // ⭐ 오각형 차트 데이터 (5개 항목: 도입부, 응대, 설명, 적극성, 정확성)
   // LLM 데이터가 있으면 실제 점수 사용, 없으면 기본값
@@ -260,11 +287,19 @@ export default function FeedbackModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] flex flex-col shadow-2xl">
         {/* 헤더 */}
-        <div className="bg-gradient-to-r from-[#0047AB] to-[#003580] text-white p-3 rounded-t-lg flex items-center justify-between">
+        <div className={`${
+          isEducationMode
+            ? 'bg-gradient-to-r from-[#10B981] to-[#059669]'
+            : 'bg-gradient-to-r from-[#0047AB] to-[#003580]'
+        } text-white p-3 rounded-t-lg flex items-center justify-between`}>
           <div className="flex items-center gap-3">
             <div>
-              <h2 className="text-lg font-bold">🎯 상담 품질 피드백</h2>
-              <p className="text-xs opacity-90">AI 분석 기반 상담 품질 평가</p>
+              <h2 className="text-lg font-bold">
+                {isAdvancedMode ? '🏆 우수 사례 교육 평가' : isEducationMode ? '🎓 시나리오 교육 평가' : '🎯 상담 품질 피드백'}
+              </h2>
+              <p className="text-xs opacity-90">
+                {isAdvancedMode ? '실제 우수 사례 대비 모방 유사도 분석' : isEducationMode ? 'AI 시나리오 기반 응대 역량 평가' : 'AI 분석 기반 상담 품질 평가'}
+              </p>
             </div>
             <div className="flex items-center gap-2 ml-6">
               <span className="text-2xl font-bold">{totalScore}</span>
@@ -272,6 +307,11 @@ export default function FeedbackModal({
               <span className="ml-2 px-3 py-1 bg-white/20 rounded-full text-xs font-semibold">
                 {totalScore >= 90 ? '우수' : totalScore >= 80 ? '양호' : totalScore >= 70 ? '보통' : '개선 필요'}
               </span>
+              {isEducationMode && (
+                <span className="ml-1 px-2 py-0.5 bg-white/30 rounded text-[10px]">
+                  {isAdvancedMode ? '우수사례' : '시나리오'} 교육
+                </span>
+              )}
             </div>
           </div>
           <button
@@ -341,9 +381,9 @@ export default function FeedbackModal({
               </p>
             </div>
 
-            {/* 우측: 4개 주요 점수 */}
+            {/* 우측: 주요 점수 */}
             <div className="space-y-3">
-              {/* 1. 매뉴얼 준수 */}
+              {/* 1. 매뉴얼 준수 (공통) */}
               <div className="p-3 bg-[#F8FBFF] rounded-lg border border-[#0047AB]/10">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold text-[#333333]">
@@ -364,39 +404,69 @@ export default function FeedbackModal({
                 </p>
               </div>
 
-              {/* 2. 고객 감사 표현 */}
-              <div className="p-3 bg-[#F8FBFF] rounded-lg border border-[#34A853]/10">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-[#333333]">
-                    2. 고객 감사 <span className="text-xs text-[#666666]">- {gratitudeMessage}</span>
-                  </span>
-                  <span className="text-sm font-bold text-[#34A853]">
-                    {feedbackData.customerGratitude}/10
-                  </span>
-                </div>
-                <div className="bg-[#E0E0E0] h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-[#34A853] h-full rounded-full transition-all duration-500"
-                    style={{ width: `${(feedbackData.customerGratitude / 10) * 100}%` }}
-                  />
-                </div>
-                <p className="text-xs text-[#666666] mt-1">
-                  {Math.round((feedbackData.customerGratitude / 10) * 100)}%
-                </p>
-              </div>
+              {isEducationMode ? (
+                <>
+                  {/* 2. 유사도 (교육 모드 전용 - 고객감사+감정전환 대체) */}
+                  <div className="p-3 bg-[#F0FDF4] rounded-lg border border-[#10B981]/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-[#333333]">
+                        2. 응대 유사도 <span className="text-xs text-[#666666]">- {getSimilarityMessage(educationScores?.similarityScore ?? 0)}</span>
+                      </span>
+                      <span className="text-sm font-bold text-[#10B981]">
+                        {educationScores?.similarityScore ?? 0}/30
+                      </span>
+                    </div>
+                    <div className="bg-[#E0E0E0] h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-[#10B981] h-full rounded-full transition-all duration-500"
+                        style={{ width: `${((educationScores?.similarityScore ?? 0) / 30) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-[#666666] mt-1">
+                      {Math.round(((educationScores?.similarityScore ?? 0) / 30) * 100)}%
+                      <span className="ml-2 text-[#999999]">
+                        {isAdvancedMode ? '(원본 상담 대비)' : '(시나리오 기준)'}
+                      </span>
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* 2. 고객 감사 표현 (실전 모드) */}
+                  <div className="p-3 bg-[#F8FBFF] rounded-lg border border-[#34A853]/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-[#333333]">
+                        2. 고객 감사 <span className="text-xs text-[#666666]">- {gratitudeMessage}</span>
+                      </span>
+                      <span className="text-sm font-bold text-[#34A853]">
+                        {feedbackData.customerGratitude}/10
+                      </span>
+                    </div>
+                    <div className="bg-[#E0E0E0] h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-[#34A853] h-full rounded-full transition-all duration-500"
+                        style={{ width: `${(feedbackData.customerGratitude / 10) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-[#666666] mt-1">
+                      {Math.round((feedbackData.customerGratitude / 10) * 100)}%
+                    </p>
+                  </div>
+                </>
+              )}
 
-              {/* 3. 후처리 시간 */}
+              {/* 3. 후처리 시간 (공통) */}
               <div className="p-3 bg-[#F8FBFF] rounded-lg border border-[#34A853]/10">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold text-[#333333]">
-                    3. 후처리 <span className="text-xs text-[#666666]">- ⌛{acwTimeDisplay} {acwMessage}</span>
+                    {isEducationMode ? '3' : '3'}. 후처리 <span className="text-xs text-[#666666]">- {acwTimeDisplay} {acwMessage}</span>
                   </span>
                   <span className="text-sm font-bold text-[#34A853]">
                     {acwScore}/20
                   </span>
                 </div>
                 <div className="bg-[#E0E0E0] h-2 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="bg-[#34A853] h-full rounded-full transition-all duration-500"
                     style={{ width: `${(acwScore / 20) * 100}%` }}
                   />
@@ -406,26 +476,28 @@ export default function FeedbackModal({
                 </p>
               </div>
 
-              {/* 4. 감정 전환 */}
-              <div className="p-3 bg-[#F8FBFF] rounded-lg border border-[#FBBC04]/10">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-[#333333]">
-                    4. 감정 전환 <span className="text-xs text-[#666666]">- {emotionMessage}</span>
-                  </span>
-                  <span className="text-sm font-bold text-[#FBBC04]">
-                    {feedbackData.emotionTransition}/20
-                  </span>
+              {!isEducationMode && (
+                /* 4. 감정 전환 (실전 모드 전용) */
+                <div className="p-3 bg-[#F8FBFF] rounded-lg border border-[#FBBC04]/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-[#333333]">
+                      4. 감정 전환 <span className="text-xs text-[#666666]">- {emotionMessage}</span>
+                    </span>
+                    <span className="text-sm font-bold text-[#FBBC04]">
+                      {feedbackData.emotionTransition}/20
+                    </span>
+                  </div>
+                  <div className="bg-[#E0E0E0] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-[#FBBC04] h-full rounded-full transition-all duration-500"
+                      style={{ width: `${(feedbackData.emotionTransition / 20) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-[#666666] mt-1">
+                    {Math.round((feedbackData.emotionTransition / 20) * 100)}%
+                  </p>
                 </div>
-                <div className="bg-[#E0E0E0] h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-[#FBBC04] h-full rounded-full transition-all duration-500"
-                    style={{ width: `${(feedbackData.emotionTransition / 20) * 100}%` }}
-                  />
-                </div>
-                <p className="text-xs text-[#666666] mt-1">
-                  {Math.round((feedbackData.emotionTransition / 20) * 100)}%
-                </p>
-              </div>
+              )}
             </div>
           </div>
 
@@ -451,32 +523,70 @@ export default function FeedbackModal({
             </p>
           </div>
 
-          {/* 감정 변화 */}
-          <div className="mb-3 p-3 bg-[#F8FBFF] rounded-lg border border-[#0047AB]/20">
-            <p className="text-sm font-semibold text-[#333333] mb-2">감정 변화</p>
-            <div className="flex items-center justify-center gap-3">
-              <div className="text-center">
-                <div className="text-3xl mb-1">{emotionEmoji[feedbackData.emotion.early]}</div>
-                <div className="text-xs font-semibold" style={{ color: emotionColor[feedbackData.emotion.early] }}>
-                  초반: {emotionText[feedbackData.emotion.early]}
+          {/* 감정 변화 (실전 모드 전용 - 교육 모드에서는 AI이므로 감정 없음) */}
+          {!isEducationMode && (
+            <div className="mb-3 p-3 bg-[#F8FBFF] rounded-lg border border-[#0047AB]/20">
+              <p className="text-sm font-semibold text-[#333333] mb-2">감정 변화</p>
+              <div className="flex items-center justify-center gap-3">
+                <div className="text-center">
+                  <div className="text-3xl mb-1">{emotionEmoji[feedbackData.emotion.early]}</div>
+                  <div className="text-xs font-semibold" style={{ color: emotionColor[feedbackData.emotion.early] }}>
+                    초반: {emotionText[feedbackData.emotion.early]}
+                  </div>
                 </div>
-              </div>
-              <div className="text-[#666666] text-xl">→</div>
-              <div className="text-center">
-                <div className="text-3xl mb-1">{emotionEmoji[feedbackData.emotion.middle]}</div>
-                <div className="text-xs font-semibold" style={{ color: emotionColor[feedbackData.emotion.middle] }}>
-                  중반: {emotionText[feedbackData.emotion.middle]}
+                <div className="text-[#666666] text-xl">&rarr;</div>
+                <div className="text-center">
+                  <div className="text-3xl mb-1">{emotionEmoji[feedbackData.emotion.middle]}</div>
+                  <div className="text-xs font-semibold" style={{ color: emotionColor[feedbackData.emotion.middle] }}>
+                    중반: {emotionText[feedbackData.emotion.middle]}
+                  </div>
                 </div>
-              </div>
-              <div className="text-[#666666] text-xl">→</div>
-              <div className="text-center">
-                <div className="text-3xl mb-1">{emotionEmoji[feedbackData.emotion.late]}</div>
-                <div className="text-xs font-semibold" style={{ color: emotionColor[feedbackData.emotion.late] }}>
-                  후반: {emotionText[feedbackData.emotion.late]}
+                <div className="text-[#666666] text-xl">&rarr;</div>
+                <div className="text-center">
+                  <div className="text-3xl mb-1">{emotionEmoji[feedbackData.emotion.late]}</div>
+                  <div className="text-xs font-semibold" style={{ color: emotionColor[feedbackData.emotion.late] }}>
+                    후반: {emotionText[feedbackData.emotion.late]}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* 우수 사례 교육: 모방 유사도 카드 */}
+          {isAdvancedMode && educationScores?.mimicryScore != null && (() => {
+            const grade = getMimicryGrade(educationScores.mimicryScore);
+            return (
+              <div className="mb-3 p-4 bg-gradient-to-r from-[#F0FDF4] to-[#ECFDF5] rounded-lg border border-[#10B981]/30">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-bold text-[#333333]">모방 유사도</p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-black text-sm"
+                      style={{ backgroundColor: grade.color }}
+                    >
+                      {grade.label}
+                    </span>
+                    <span className="text-xl font-black text-[#059669]">
+                      {educationScores.mimicryScore}
+                      <span className="text-sm font-normal text-[#666666]">/100</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-[#E0E0E0] h-3 rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${educationScores.mimicryScore}%`,
+                      background: `linear-gradient(90deg, #10B981, ${grade.color})`
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-[#666666]">
+                  {getMimicryMessage(educationScores.mimicryScore)}
+                </p>
+              </div>
+            );
+          })()}
 
           {/* 개선 필요 사항 - ⭐ [v24] LLM 피드백 텍스트 표시 */}
           {(feedbackData.feedback || feedbackData.manualDetails.customerCheck < 0) && (

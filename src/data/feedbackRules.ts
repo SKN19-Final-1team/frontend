@@ -319,6 +319,49 @@ export function getRadarChartData(manualScore: number): RadarChartData[] {
   ];
 }
 
+// ========== 5. 교육 모드 유사도 평가 (30점) ==========
+
+export interface EducationScores {
+  similarityScore: number;     // 유사도 점수 (30점 만점) - 기본 시나리오/우수 사례 공통
+  mimicryScore?: number;       // 모방 유사도 (100점 만점) - 우수 사례 교육 전용
+}
+
+/**
+ * 유사도 점수 메시지 (30점 만점 기준)
+ * - 기본 시나리오: AI 대화 흐름과의 유사도
+ * - 우수 사례: 원본 상담과의 유사도
+ */
+export function getSimilarityMessage(score: number): string {
+  const pct = (score / 30) * 100;
+  if (pct >= 90) return "매우 유사한 응대!";
+  if (pct >= 75) return "우수한 대응 유사도!";
+  if (pct >= 60) return "양호한 수준이에요!";
+  if (pct >= 40) return "조금 더 연습해보세요!";
+  return "다시 한번 도전해보세요!";
+}
+
+/**
+ * 모방 유사도 메시지 (100점 만점 기준) - 우수 사례 전용
+ */
+export function getMimicryMessage(score: number): string {
+  if (score >= 90) return "우수 사례를 거의 완벽하게 재현했어요!";
+  if (score >= 75) return "핵심 응대 패턴을 잘 따라했어요!";
+  if (score >= 60) return "기본 흐름은 유사하지만 디테일을 더 살려보세요!";
+  if (score >= 40) return "우수 사례의 응대 패턴을 더 참고해보세요!";
+  return "우수 사례를 다시 살펴보고 도전해보세요!";
+}
+
+/**
+ * 모방 유사도 등급 라벨
+ */
+export function getMimicryGrade(score: number): { label: string; color: string } {
+  if (score >= 90) return { label: 'S', color: '#FFD700' };
+  if (score >= 75) return { label: 'A', color: '#34A853' };
+  if (score >= 60) return { label: 'B', color: '#0047AB' };
+  if (score >= 40) return { label: 'C', color: '#FBBC04' };
+  return { label: 'D', color: '#EA4335' };
+}
+
 // ========== Mock 피드백 데이터 ==========
 
 export const mockFeedbackData: FeedbackScore & {
