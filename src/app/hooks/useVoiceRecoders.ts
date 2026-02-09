@@ -3,8 +3,8 @@ import { encodeWAV } from './../../utils/audio'
 
 const SAMPLE_RATE = 16000;
 const VAD_THRESHOLD = 0.025;
-const SILENCE_DURATION = 1000;
-const MAX_RECORDING_DURATION = 1500;
+const SILENCE_DURATION = 300;
+const MAX_RECORDING_DURATION = 10000;
 
 type WsStatus = 'Connected' | 'Disconnected' | 'Error';
 
