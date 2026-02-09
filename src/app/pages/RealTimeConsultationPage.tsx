@@ -583,7 +583,7 @@ export default function RealTimeConsultationPage() {
         ttsAudioRef.current.pause();
         ttsAudioRef.current = null;
       }
-      const audio = new Audio(`http://15.165.13.182:8000${data.audio_url}`);
+      const audio = new Audio(`${data.audio_url}`);
       ttsAudioRef.current = audio;
       audio.play().catch(err => console.error('[TTS] 재생 실패:', err));
     }
