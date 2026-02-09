@@ -605,8 +605,8 @@ export default function RealTimeConsultationPage() {
 
   // ⭐ [v25] 교육 모드: ws/edu, 실전 모드: ws/call
   const wsEndpoint = isSimulationMode
-    ? "ws://15.165.13.182:8000/api/v1/ws/edu"
-    : "ws://15.165.13.182:8000/api/v1/ws/call";
+    ? "ws://15.165.13.182/api/v1/ws/edu"
+    : "ws://15.165.13.182/api/v1/ws/call";
 
   const { start: startRecording, stop: stopRecording, sendMessage, wsStatus, sessionId } = useVoiceRecorder({
     onRagResult: handleRagResult,
