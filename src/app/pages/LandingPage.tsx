@@ -33,7 +33,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white overflow-x-hidden">
+    <div className="min-h-[var(--full-vh)] bg-[#0A0E1A] text-white overflow-x-hidden">
       {/* Minimalist Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {/* Single large gradient orb */}
@@ -73,7 +73,7 @@ export default function LandingPage() {
 
       <div className="relative">
         {/* Hero Section */}
-        <section className="min-h-screen flex items-center justify-center px-4 sm:px-6 py-12 sm:py-20">
+        <section className="min-h-[var(--full-vh)] flex items-center justify-center px-4 sm:px-6 py-12 sm:py-20">
           <div className="max-w-[1200px] mx-auto w-full">
             
             <motion.div

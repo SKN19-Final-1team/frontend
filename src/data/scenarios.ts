@@ -7,7 +7,7 @@ import { scenarios, getScenarioByCategory } from './scenarios/index';
 export { scenarios, getScenarioByCategory };
 
 // ⭐ Phase 2: 문서 타입 체계화
-export type DocumentType = 'terms' | 'product-spec' | 'analysis-report' | 'guide' | 'general';
+export type DocumentType = 'terms' | 'product-spec' | 'analysis-report' | 'guide' | 'faq' | 'general';
 
 export interface ScenarioKeyword {
   text: string;

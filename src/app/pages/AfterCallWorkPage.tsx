@@ -505,6 +505,7 @@ export default function AfterCallWorkPage() {
     used: boolean;
   }>>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [selectedDocumentTitle, setSelectedDocumentTitle] = useState<string | null>(null);
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   
   // ⭐ Phase 8-2: 피드백 모달 상태
@@ -933,10 +934,11 @@ export default function AfterCallWorkPage() {
   return (
     <MainLayout>
       <div 
-        className={`flex bg-white fixed top-[60px] right-0 bottom-0 overflow-hidden transition-opacity duration-600 ease-out ${
+        className={`flex bg-white fixed right-0 bottom-0 overflow-hidden transition-opacity duration-600 ease-out ${
           isFadingIn ? 'opacity-0' : 'opacity-100'
         } transition-all duration-300`}
         style={{
+          top: 'var(--header-height, 60px)',
           left: `${isSidebarExpanded ? 200 : 56}px`,
           // ⭐ 튜토리얼 활성화 시 z-index를 낮춰서 오버레이 아래로 들어가게
           zIndex: isTutorialActive ? 1 : 'auto',
@@ -1030,6 +1032,7 @@ export default function AfterCallWorkPage() {
                   className="flex items-center gap-2 p-2 rounded bg-white hover:bg-[#F8FBFF] cursor-pointer transition-colors border border-[#E0E0E0]"
                   onClick={() => {
                     setSelectedDocumentId(doc.documentId);
+                    setSelectedDocumentTitle(doc.title);
                     setIsDocumentModalOpen(true);
                   }}
                 >
@@ -1291,8 +1294,13 @@ export default function AfterCallWorkPage() {
           onClose={() => {
             setIsDocumentModalOpen(false);
             setSelectedDocumentId(null);
+            setSelectedDocumentTitle(null);
           }}
           documentId={selectedDocumentId}
+          documentData={selectedDocumentTitle ? {
+            title: selectedDocumentTitle,
+            content: selectedDocumentTitle,
+          } : undefined}
         />
       )}
 

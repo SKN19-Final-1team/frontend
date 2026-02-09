@@ -152,6 +152,11 @@ export default function FrequentInquiryModal({ isOpen, onClose, inquiry, detailD
           isOpen={isDocumentModalOpen}
           onClose={() => setIsDocumentModalOpen(false)}
           documentId={selectedDocumentId}
+          documentData={detail?.relatedDocument ? {
+            title: detail.relatedDocument.title,
+            content: detail.relatedDocument.summary,
+            regulation: detail.relatedDocument.regulation,
+          } : undefined}
         />
       )}
     </div>

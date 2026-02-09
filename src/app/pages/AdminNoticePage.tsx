@@ -94,7 +94,7 @@ export default function AdminNoticePage() {
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-60px)] flex flex-col p-3 gap-3 bg-[#F5F5F5] overflow-hidden">
+      <div className="h-[var(--content-height)] flex flex-col p-3 gap-3 bg-[#F5F5F5] overflow-hidden">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 flex-shrink-0">
           <div className="flex items-center justify-between">

@@ -89,7 +89,7 @@ export default function AdminNoticeEditPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div className="h-[calc(100vh-60px)] flex items-center justify-center bg-[#F5F5F5]">
+        <div className="h-[var(--content-height)] flex items-center justify-center bg-[#F5F5F5]">
           <div className="text-sm text-[#666666]">로딩 중...</div>
         </div>
       </MainLayout>
@@ -98,7 +98,7 @@ export default function AdminNoticeEditPage() {
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-60px)] flex flex-col p-3 sm:p-4 gap-3 bg-[#F5F5F5] overflow-y-auto">
+      <div className="h-[var(--content-height)] flex flex-col p-3 sm:p-4 gap-3 bg-[#F5F5F5] overflow-y-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 flex-shrink-0">
           <div className="flex items-center gap-3">

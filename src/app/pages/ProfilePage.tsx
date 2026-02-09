@@ -102,7 +102,7 @@ export default function ProfilePage() {
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-60px)] overflow-y-auto p-2 sm:p-4">
+      <div className="h-[var(--content-height)] overflow-y-auto p-2 sm:p-4">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-4">
             {/* Profile Card */}

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { encodeWAV } from './../../utils/audio'
+import { encodeWAV } from './../../utils/audio';
+import { WS_BASE_URL } from '@/config';
 
 const SAMPLE_RATE = 16000;
 const VAD_THRESHOLD = 0.025;
@@ -173,7 +174,7 @@ export const useVoiceRecorder = (options?: UseVoiceRecorderOptions) => {
       console.log('[WebSocket] 연결 시작...');
 
       // ⭐ [v25] 웹소켓 연결 (교육: ws/edu, 실전: ws/call)
-      const endpoint = optionsRef.current?.wsEndpoint || "ws://127.0.0.1:8000/api/v1/ws/call";
+      const endpoint = optionsRef.current?.wsEndpoint || `${WS_BASE_URL}/ws/call`;
       console.log('[WebSocket] 엔드포인트:', endpoint);
       websocket.current = new WebSocket(endpoint);
 

@@ -9,8 +9,7 @@
 import { USE_MOCK_DATA } from '@/config/mockConfig';
 import { employeesData } from '@/data/mock';
 
-// API 기본 URL
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+import { API_BASE_URL } from '@/config';
 
 export interface Employee {
   id: string;

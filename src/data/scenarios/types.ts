@@ -2,7 +2,7 @@
 // 실제 RAG, STT, 고객DB를 시뮬레이션하는 타입 시스템
 
 // ⭐ Phase 2: 문서 타입 체계화
-export type DocumentType = 'terms' | 'product-spec' | 'analysis-report' | 'guide' | 'general';
+export type DocumentType = 'terms' | 'product-spec' | 'analysis-report' | 'guide' | 'faq' | 'general';
 
 export interface ScenarioKeyword {
   text: string;

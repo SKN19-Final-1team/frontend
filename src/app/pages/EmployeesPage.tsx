@@ -117,7 +117,7 @@ export default function EmployeesPage() {
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-60px)] flex flex-col p-3 gap-3 bg-[#F5F5F5] overflow-hidden">
+      <div className="h-[var(--content-height)] flex flex-col p-3 gap-3 bg-[#F5F5F5] overflow-hidden">
         {/* Header with Top 3 + Search Box (Search on the right) */}
         <div className="grid grid-cols-4 gap-3 flex-shrink-0">
           {/* Top 3 Performers - 컴팩트 카드 */}

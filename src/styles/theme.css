@@ -1,8 +1,16 @@
 @custom-variant dark (&:is(.dark *));
 
+html {
+  zoom: 0.9;
+}
+
 :root {
   --font-size: 16px;
-  
+  --zoom: 0.9;
+  --header-height: 60px;
+  --full-vh: calc(100vh / var(--zoom));
+  --content-height: calc(var(--full-vh) - var(--header-height));
+
   /* CALL:ACT Brand Colors */
   --primary-blue: #0047AB;
   --secondary-blue: #4A90E2;

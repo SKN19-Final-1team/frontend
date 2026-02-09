@@ -57,7 +57,7 @@ export default function AdminNoticeCreatePage() {
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-60px)] flex flex-col p-3 sm:p-4 gap-3 bg-[#F5F5F5] overflow-y-auto">
+      <div className="h-[var(--content-height)] flex flex-col p-3 sm:p-4 gap-3 bg-[#F5F5F5] overflow-y-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-3 flex-shrink-0">
           <div className="flex items-center gap-3">

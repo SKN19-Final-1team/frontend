@@ -36,10 +36,16 @@ export interface Customer {
  */
 export interface ReferencedDocument {
   stepNumber: number;       // RAG 조회 순서
-  documentId: string;       // DOC-123
+  documentId: string;       // DB 원본 ID (예: CARD-SHINHAN-xxx, 카드분실_xxx_merged)
   title: string;
   used: boolean;            // 클릭 여부
   viewCount?: number;       // 조회 횟수 (상담 중)
+  // Phase A 확장 (optional - 하위 호환)
+  documentType?: string;    // 'terms' | 'product-spec' | 'guide' | 'general' | 'analysis-report'
+  sourceTable?: string;     // 'card_products' | 'service_guide_documents' | 'notices' 등
+  category?: string;        // 상담 카테고리
+  relevanceScore?: number;  // RAG 검색 점수 (0-100)
+  content?: string;         // 요약 내용 (재참조 시 표시용)
 }
 
 // ========================================

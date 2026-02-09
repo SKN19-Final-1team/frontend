@@ -58,7 +58,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   };
 
   return (
-    <div className={`bg-[#F5F5F5] ${isConsultationPage ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`bg-[#F5F5F5] ${isConsultationPage ? 'h-[var(--full-vh)] overflow-hidden' : 'min-h-[var(--full-vh)]'}`}>
       <Header />
       
       <Sidebar 
@@ -73,7 +73,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
           ${!isConsultationPage ? 'mt-[60px]' : ''} 
           transition-all duration-300 
           ${!isConsultationPage ? (isSidebarExpanded ? 'lg:ml-[200px]' : 'lg:ml-[56px]') : ''}
-          ${(isConsultationPage || isSimulationPage) ? 'overflow-hidden' : ''}
         `}
         onClick={handleMainClick}
       >

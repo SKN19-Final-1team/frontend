@@ -4,10 +4,10 @@
 import { searchMockData, getDocumentNames } from '@/data/searchMockData';
 import { ScenarioCard } from '@/data/scenarios';
 import { addTimestampToCard, updateCardDisplayTime } from './timeFormatter';
+import { normalizeRAGCard } from './documentTransformer';
 import { USE_MOCK_DATA } from '@/config/mockConfig';
 
-// RAG API 기본 URL
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+import { API_BASE_URL } from '@/config';
 
 /**
  * 검색 결과 타입
@@ -61,25 +61,11 @@ const searchWithRAG = async (query: string): Promise<SearchResult> => {
       };
     }
 
-    // ScenarioCard 형태로 변환 + timestamp + relevanceScore 추가
+    // ScenarioCard 형태로 변환 (중앙 유틸리티 사용)
     const cards: ScenarioCard[] = rawCards.map((card: any, idx: number) => {
-      const scenarioCard: ScenarioCard = {
-        id: card.id || `RAG-${Date.now()}-${idx}`,
-        title: card.title || '',
-        keywords: card.keywords || [],
-        content: card.content || '',
-        systemPath: card.systemPath || '',
-        requiredChecks: card.requiredChecks || [],
-        exceptions: card.exceptions || [],
-        time: card.time || '',
-        note: card.note || '',
-        regulation: card.regulation || '',
-        fullText: card.fullText || card.content || '',
-        documentType: card.documentType || 'general',
-      };
-      const withTimestamp = addTimestampToCard(scenarioCard);
+      const normalized = normalizeRAGCard(card, idx);
       return {
-        ...withTimestamp,
+        ...normalized,
         relevanceScore: 100 - (idx * 2.5),
       };
     });

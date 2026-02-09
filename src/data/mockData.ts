@@ -621,26 +621,6 @@ export const recentAttemptsData = [
   { id: 3, scenario: 'SIM-001', title: '카드 분실 신고 및 재발급', score: 92, date: '2025-01-03 16:10', duration: '5분 10초' },
 ];
 
-// ==================== 대시보드 통계 데이터 ====================
-export const dashboardStatsData = {
-  todayCalls: 127,
-  completed: 95,
-  pending: 12,
-  incomplete: 20
-};
-
-export const weeklyGoalData = {
-  target: 500,
-  current: 389,
-  percentage: 78
-};
-
-export const teamStatsData = [
-  { team: 'A팀', calls: 142, fcr: 94, color: '#0047AB' },
-  { team: 'B팀', calls: 128, fcr: 89, color: '#34A853' },
-  { team: 'C팀', calls: 119, fcr: 91, color: '#FBBC04' },
-];
-
 // ==================== 프로필 배지 데이터 ====================
 export const badgesData = [
   { id: 1, name: 'FCR 마스터', color: '#FBBC04' },

@@ -31,6 +31,7 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
   const [duration, setDuration] = useState(327); // 5분 27초
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [selectedDocumentData, setSelectedDocumentData] = useState<{ title: string; content: string; fullText?: string } | null>(null);
   const [isRecordingDownloadWarningModalOpen, setIsRecordingDownloadWarningModalOpen] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -202,7 +203,8 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
       return db.referenced_documents.map((doc, idx) => ({
         id: doc.doc_id || `doc-${idx}`,
         title: doc.title || `참조 문서 ${idx + 1}`,
-        content: doc.doc_type || '문서',
+        content: doc.content || doc.doc_type || '문서',
+        fullText: doc.full_text || doc.content || '',
       }));
     }
     return mockDetailData.documents;
@@ -395,6 +397,11 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
                   key={index}
                   onClick={() => {
                     setSelectedDocumentId(doc.id);
+                    setSelectedDocumentData({
+                      title: doc.title,
+                      content: doc.content,
+                      fullText: (doc as any).fullText,
+                    });
                     setIsDocumentModalOpen(true);
                   }}
                   className="w-full flex items-center gap-2 p-1.5 rounded bg-[#F8F9FA] hover:bg-[#E8F1FC] transition-colors cursor-pointer text-left"
@@ -439,8 +446,14 @@ export default function ConsultationDetailModal({ isOpen, onClose, consultation 
           onClose={() => {
             setIsDocumentModalOpen(false);
             setSelectedDocumentId(null);
+            setSelectedDocumentData(null);
           }}
           documentId={selectedDocumentId}
+          documentData={selectedDocumentData ? {
+            title: selectedDocumentData.title,
+            content: selectedDocumentData.content,
+            fullText: selectedDocumentData.fullText,
+          } : undefined}
         />
       )}
 

@@ -30,6 +30,7 @@ import { TutorialGuide, type TutorialStep } from '@/app/components/tutorial/Tuto
 import { tutorialStepsPhase1, tutorialStepsPhase2 } from '@/data/tutorialSteps';
 import { InfoCard } from '@/app/components/consultation/InfoCard';
 import { addTimestampToCard } from '@/utils/timeFormatter';
+import { normalizeRAGCard } from '@/utils/documentTransformer';
 import { SearchHistoryDropdown } from '@/app/components/consultation/SearchHistoryDropdown';
 import { SearchResultLayer } from '@/app/components/consultation/SearchResultLayer';
 import { SearchLayer } from '@/app/components/consultation/SearchLayer';
@@ -37,8 +38,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { handleSearchExecution } from '@/utils/searchLayerHelpers';
 import { useLayerNavigation } from '@/hooks/useLayerNavigation';
 import { useVoiceRecorder, type RAGResponse, type RAGCard } from '../hooks/useVoiceRecoders';
+import { API_BASE_URL, WS_BASE_URL, BASE_URL } from '@/config';
 import { simulateSearch, getSearchHistory, clearSearchHistory, saveSearchHistory, type SearchHistoryItem } from '@/utils/searchSimulator';
 import { LayerTransitionWrapper } from '@/app/components/consultation/LayerTransitionWrapper';
+import { incomingKeywordsByCase as keywordDictionaryByCase, matchKeyword, STOP_WORDS } from '@/data/keywordDictionary';
 
 // Mock Data (기본값 - 통화 전)
 const defaultCustomerInfo = {
@@ -63,17 +66,8 @@ const defaultRecentConsultations = [
   { id: 3, title: '수수료 환불 요청', date: '2024-12-20 09:15', category: '수수료문의', status: '완료' },
 ];
 
-// ⭐ 인입 케이스별 키워드 (통화 전 이미 분류되어 있음) - ⭐ Phase 14: 8개 대분류로 통일
-const incomingKeywordsByCase: Record<string, string[]> = {
-  '분실/도난': ['카드분실', '분실신고', '재발급', '도난', '긴급정지', '즉시정지', '카드정지'],
-  '한도': ['한도증액', '한도조회', '신용한도', '증액신청', '한도상향', '한도부족'],
-  '결제/승인': ['결제', '승인', '선결제', '즉시출금', '결제대금', '승인취소', '매출취소', '결제오류'],
-  '이용내역': ['이용내역', '이용내역조회', '거래내역', '사용내역', '명세서'],
-  '수수료/연체': ['연체', '연체문의', '연체이자', '수수료문의', '연회비', '이자', '할부수수료', '미납', '납부'],
-  '포인트/혜택': ['포인트', '마일리지', '캐시백', '적립', '혜택조회', '이벤트', '혜택'],
-  '정부지원': ['정부지원', '바우처', '등유', '임신', '육아', '복지카드', '정부지원금'],
-  '기타': ['일반상담', '안내', '기타문의', '카드발급', '서비스', '문의', '해외결제', '해외사용', '결제일변경'],
-};
+// ⭐ 인입 케이스별 키워드 - keywordDictionary.ts에서 import (백엔드 사전 기반)
+const incomingKeywordsByCase = keywordDictionaryByCase;
 
 // ⭐ 카테고리 → 직접 import 시나리오 매핑 (브라우저 캐시 문제 완전 방지)
 function getDirectScenario(category: string): Scenario | null {
@@ -354,6 +348,7 @@ export default function RealTimeConsultationPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle'); // 저장 상태 표시
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false); // 참조문서 상세 모달
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null); // 선택된 문서 ID
+  const [selectedDocumentTitle, setSelectedDocumentTitle] = useState<string | null>(null); // 선택된 문서 제목
   
   // ⭐ 검색 레이어 관련 상태
   const [activeLayer, setActiveLayer] = useState<'kanban' | 'search'>('kanban'); // 활성 레이어
@@ -377,59 +372,13 @@ export default function RealTimeConsultationPage() {
   }>>([]);
 
   // ⭐ [v23] RAG 실시간 결과 (웹소켓 응답)
-  const [ragCurrentCards, setRagCurrentCards] = useState<RAGCard[]>([]);
-  const [ragNextCards, setRagNextCards] = useState<RAGCard[]>([]);
   const [ragGuidanceScript, setRagGuidanceScript] = useState<string>('');
   // ⭐ [v25] RAG Step 기반 카드 히스토리 (각 RAG 응답 = 1 Step)
   const [ragSteps, setRagSteps] = useState<Array<{ currentCards: RAGCard[]; nextCards: RAGCard[] }>>([]);
 
-  // ⭐ [v23] RAGCard → ScenarioCard 변환 함수
+  // ⭐ [v25] RAGCard → ScenarioCard 변환 (중앙 유틸리티 사용)
   const convertRagToScenarioCard = useCallback((ragCard: RAGCard, index: number): ScenarioCard => {
-    // ⭐ documentType 추론 (백엔드 documentType 우선, 이전 호환 폴백)
-    const inferDocumentType = (): 'terms' | 'product-spec' | 'guide' | 'general' | undefined => {
-      const raw = ragCard as Record<string, unknown>;
-      // [v25] 백엔드에서 보내는 documentType 우선 사용
-      const backendDocType = raw.documentType as string;
-      if (backendDocType === 'product-spec' || backendDocType === 'guide' || backendDocType === 'terms') {
-        return backendDocType;
-      }
-      // 폴백: 테이블/제목 기반 추론
-      const table = String(raw.table || raw.source_table || '');
-      const title = String(ragCard.title || '').toLowerCase();
-      const id = String(ragCard.id || '').toLowerCase();
-
-      if (table === 'card_products' || id.startsWith('card-')) {
-        return 'product-spec';
-      }
-      if (table === 'service_guide_documents' || title.includes('안내') || title.includes('가이드')) {
-        return 'guide';
-      }
-      if (title.includes('약관') || title.includes('조건')) {
-        return 'terms';
-      }
-      return 'general';
-    };
-
-    const raw = ragCard as Record<string, unknown>;
-
-    return {
-      id: ragCard.id || `rag-${Date.now()}-${index}`,
-      title: ragCard.title || '정보 카드',
-      keywords: ragCard.keywords || [],
-      content: ragCard.content || '',
-      systemPath: raw.systemPath as string || '',
-      requiredChecks: (Array.isArray(raw.requiredChecks) ? raw.requiredChecks : []) as string[],
-      exceptions: (Array.isArray(raw.exceptions) ? raw.exceptions : []) as string[],
-      time: raw.time as string || '약 1분',
-      note: raw.note as string || '',
-      regulation: raw.regulation as string || '',
-      // [v25] fullText: 백엔드가 보내는 fullText 우선, 이전 호환 detailContent 폴백
-      fullText: raw.fullText as string || raw.detailContent as string || ragCard.content || '',
-      relevanceScore: raw.relevanceScore as number || 0,
-      timestamp: new Date().toISOString(),
-      displayTime: `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')} (방금 전)`,
-      documentType: inferDocumentType(), // ⭐ 5가지 카드 타입별 디자인 적용
-    };
+    return normalizeRAGCard(ragCard, index);
   }, []);
 
   // ⭐ [v24] STT 결과 수신 핸들러 (startTimestamp는 아래에서 정의되므로 ref 사용)
@@ -448,11 +397,13 @@ export default function RealTimeConsultationPage() {
     // STT 텍스트를 단어 단위로 분리하여 표시
     const words = text.split(/\s+/).filter(w => w.length > 0);
 
-    // 키워드 감지 (모든 카테고리에서) + 매칭된 키워드 수집
-    const allKeywords = Object.values(incomingKeywordsByCase).flat();
+    // 키워드 감지 (keywordDictionary 기반 정밀 매칭) + 매칭된 키워드 수집
     const matchedKeywords: string[] = [];
     const newTexts = words.map(word => {
-      const matched = allKeywords.find(kw => word.includes(kw) || kw.includes(word));
+      if (STOP_WORDS.has(word)) {
+        return { text: word + ' ', isKeyword: false, speaker: 'agent' as const };
+      }
+      const matched = matchKeyword(word);
       if (matched) matchedKeywords.push(matched);
       return {
         text: word + ' ',
@@ -491,31 +442,29 @@ export default function RealTimeConsultationPage() {
     // ⭐ RAG 결과 수신 시 로딩 인디케이터 해제
     setIsAnalyzing(false);
 
-    const hasCurrentCards = data.currentSituation && data.currentSituation.length > 0;
-    const hasNextCards = data.nextStep && data.nextStep.length > 0;
+    // ⭐ 카드 자동 분배: currentSituation에 3+개 카드가 있고 nextStep이 비어있으면 2+N 분배
+    let currentCards = data.currentSituation || [];
+    let nextCards = data.nextStep || [];
 
-    // 현재 상황 카드 업데이트 (최대 4개 유지)
-    if (hasCurrentCards) {
-      setRagCurrentCards(prev => {
-        const newCards = [...prev, ...data.currentSituation];
-        return newCards.slice(-4); // 최신 4개만 유지
-      });
+    if (currentCards.length > 2 && nextCards.length === 0) {
+      // 백엔드가 4개 카드를 모두 currentSituation에 넣은 경우: 앞 2개 current, 나머지 next
+      nextCards = currentCards.slice(2);
+      currentCards = currentCards.slice(0, 2);
+      console.log(`[RAG] 카드 자동 분배: ${data.currentSituation.length}장 → current ${currentCards.length} + next ${nextCards.length}`);
     }
+    console.log(`[RAG] 최종 카드: current=${currentCards.length}, next=${nextCards.length}`);
 
-    // 다음 단계 카드 업데이트 (최대 4개 유지)
-    if (hasNextCards) {
-      setRagNextCards(prev => {
-        const newCards = [...prev, ...data.nextStep];
-        return newCards.slice(-4);
-      });
-    }
+    const hasCurrentCards = currentCards.length > 0;
+    const hasNextCards = nextCards.length > 0;
+
+    // (ragSteps에 저장하므로 별도 누적 state 불필요)
 
     // ⭐ [v25] RAG Step 기반 카드 히스토리 + 칸반보드 표시
     if (hasCurrentCards || hasNextCards) {
-      // 새 RAG 응답을 하나의 Step으로 저장
+      // 새 RAG 응답을 하나의 Step으로 저장 (분배된 카드 사용)
       setRagSteps(prev => [...prev, {
-        currentCards: data.currentSituation || [],
-        nextCards: data.nextStep || [],
+        currentCards,
+        nextCards,
       }]);
 
       // Step 진행 (대기콜 시나리오와 동일한 UX)
@@ -582,7 +531,7 @@ export default function RealTimeConsultationPage() {
         ttsAudioRef.current.pause();
         ttsAudioRef.current = null;
       }
-      const audio = new Audio(`http://127.0.0.1:8000${data.audio_url}`);
+      const audio = new Audio(`${BASE_URL}${data.audio_url}`);
       ttsAudioRef.current = audio;
       audio.play().catch(err => console.error('[TTS] 재생 실패:', err));
     }
@@ -604,8 +553,8 @@ export default function RealTimeConsultationPage() {
 
   // ⭐ [v25] 교육 모드: ws/edu, 실전 모드: ws/call
   const wsEndpoint = isSimulationMode
-    ? "ws://127.0.0.1:8000/api/v1/ws/edu"
-    : "ws://127.0.0.1:8000/api/v1/ws/call";
+    ? `${WS_BASE_URL}/ws/edu`
+    : `${WS_BASE_URL}/ws/call`;
 
   const { start: startRecording, stop: stopRecording, sendMessage, wsStatus, sessionId } = useVoiceRecorder({
     onRagResult: handleRagResult,
@@ -1796,8 +1745,6 @@ export default function RealTimeConsultationPage() {
     setMaxReachedStep(0);
 
     // ⭐ [v23] RAG 카드 초기화
-    setRagCurrentCards([]);
-    setRagNextCards([]);
     setRagGuidanceScript('');
     setRagSteps([]); // ⭐ [v25] RAG Step 히스토리 초기화
 
@@ -1816,7 +1763,7 @@ export default function RealTimeConsultationPage() {
 
       console.log('🎓 [교육] 시뮬레이션 시작 API 호출:', { category: educationCategory, difficulty });
 
-      fetch('http://127.0.0.1:8000/api/v1/education/simulation/start', {
+      fetch(`${API_BASE_URL}/education/simulation/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category: educationCategory, difficulty }),
@@ -1871,7 +1818,7 @@ export default function RealTimeConsultationPage() {
     console.log('📞 다이렉트 콜: 랜덤 고객 API 호출 + 웹소켓 RAG 연동');
 
     // 랜덤 고객 정보 API 호출
-    fetch('http://127.0.0.1:8000/api/v1/customers/random')
+    fetch(`${API_BASE_URL}/customers/random`)
       .then(res => res.json())
       .then(response => {
         if (response.success && response.data) {
@@ -1908,7 +1855,7 @@ export default function RealTimeConsultationPage() {
 
           // 최근 상담 내역 API 호출
           if (customer.id) {
-            fetch(`http://127.0.0.1:8000/api/v1/customers/${customer.id}/consultations?limit=3`)
+            fetch(`${API_BASE_URL}/customers/${customer.id}/consultations?limit=3`)
               .then(res => res.json())
               .then(historyResponse => {
                 if (historyResponse.success && historyResponse.data && historyResponse.data.length > 0) {
@@ -2072,8 +2019,11 @@ export default function RealTimeConsultationPage() {
               referencedDocs.push({
                 stepNumber: stepData.stepNumber,
                 documentId: card.id,
-                title: card.title || card.id || '제목없음',  // 제목 fallback
-                used: true  // 표시된 카드는 모두 사용된 것으로 간주
+                title: card.title || card.id || '제목없음',
+                used: true,
+                documentType: card.documentType,
+                content: card.content,
+                relevanceScore: card.relevanceScore,
               });
             }
           });
@@ -2088,10 +2038,13 @@ export default function RealTimeConsultationPage() {
         // 중복 방지 (이미 referencedDocs에 있으면 스킵)
         if (!referencedDocs.some(doc => doc.documentId === card.id)) {
           referencedDocs.push({
-            stepNumber: 0, // 검색 문서는 Step 0으로 표시
+            stepNumber: 0,
             documentId: card.id,
-            title: card.title || card.id || '제목없음', // 제목 fallback
-            used: true
+            title: card.title || card.id || '제목없음',
+            used: true,
+            documentType: card.documentType,
+            content: card.content,
+            relevanceScore: card.relevanceScore,
           });
         }
       });
@@ -2101,13 +2054,21 @@ export default function RealTimeConsultationPage() {
     if (!activeScenario && ragSteps.length > 0) {
       ragSteps.forEach((step, stepIndex) => {
         [...step.currentCards, ...step.nextCards].forEach((ragCard, cardIndex) => {
+          const raw = ragCard as Record<string, unknown>;
           const docId = ragCard.id || `RAG-STEP${stepIndex + 1}-${cardIndex}`;
+          if (!ragCard.id) {
+            console.warn('[참조문서] RAG 카드에 ID 없음, 임시 ID 사용:', docId);
+          }
           if (!referencedDocs.some(doc => doc.documentId === docId)) {
             referencedDocs.push({
               stepNumber: stepIndex + 1,
               documentId: docId,
               title: ragCard.title || docId,
-              used: true
+              used: true,
+              documentType: raw.documentType as string,
+              sourceTable: (raw.table || raw.source_table || raw.sourceTable) as string,
+              content: ragCard.content,
+              relevanceScore: raw.relevanceScore as number,
             });
           }
         });
@@ -2237,7 +2198,7 @@ export default function RealTimeConsultationPage() {
         console.log('🤖 [ACW] LLM 분석 API 호출 시작 (session_id:', dialogueSessionId, ')');
 
         // ⭐ 팀원이 작성한 기존 followup API 사용
-        const response = await fetch('http://127.0.0.1:8000/api/v1/followup', {
+        const response = await fetch(`${API_BASE_URL}/followup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2680,8 +2641,9 @@ export default function RealTimeConsultationPage() {
       </button>
 
       <div 
-        className="flex bg-[#F5F5F5] fixed top-[60px] right-0 bottom-0 overflow-hidden transition-all duration-300"
-        style={{ 
+        className="flex bg-[#F5F5F5] fixed right-0 bottom-0 overflow-hidden transition-all duration-300"
+        style={{
+          top: 'var(--header-height, 60px)',
           left: `${isSidebarExpanded ? 200 : 56}px`
         }}
       >
@@ -3092,25 +3054,54 @@ export default function RealTimeConsultationPage() {
                       >
                         {/* 좌측: 인디케이터 막대들 + Step N/N */}
                         <div className="flex items-center gap-2">
-                          {/* 가로 막대 인디케이터 - 동적 렌더링 */}
-                          {Array.from({ length: activeScenario ? activeScenario.steps.length : maxReachedStep }).map((_, index) => (
-                            <button
-                              key={index}
-                              onClick={() => handleProgressClick(index)}
-                              disabled={index >= maxReachedStep}
-                              className={`h-1 rounded-full transition-all duration-500 ${
-                                index < maxReachedStep
-                                  ? 'bg-[#0047AB] w-8 cursor-pointer hover:bg-[#003580]'
-                                  : 'bg-[#E0E0E0] w-4 cursor-not-allowed'
-                              }`}
-                              title={index < maxReachedStep
-                                ? `Step ${index + 1}로 이동`
-                                : `Step ${index + 1} (키워드 감지 대기 중)`
+                          {/* 가로 막대 인디케이터 - 최대 8개 표시 (다이렉트콜에서 25+개 방지) */}
+                          {(() => {
+                            const totalSteps = activeScenario ? activeScenario.steps.length : maxReachedStep;
+                            const MAX_VISIBLE_BARS = 8;
+                            // 표시할 범위 계산: 현재 step 주변을 보여줌
+                            let startIdx = 0;
+                            let endIdx = totalSteps;
+                            const needsTruncation = totalSteps > MAX_VISIBLE_BARS;
+                            if (needsTruncation) {
+                              // 현재 step 기준으로 앞뒤로 표시
+                              startIdx = Math.max(0, currentStep - Math.floor(MAX_VISIBLE_BARS / 2));
+                              endIdx = startIdx + MAX_VISIBLE_BARS;
+                              if (endIdx > totalSteps) {
+                                endIdx = totalSteps;
+                                startIdx = Math.max(0, endIdx - MAX_VISIBLE_BARS);
                               }
-                            />
-                          ))}
+                            }
+                            return (
+                              <>
+                                {needsTruncation && startIdx > 0 && (
+                                  <span className="text-[10px] text-[#999999]">...</span>
+                                )}
+                                {Array.from({ length: endIdx - startIdx }).map((_, i) => {
+                                  const index = startIdx + i;
+                                  return (
+                                    <button
+                                      key={index}
+                                      onClick={() => handleProgressClick(index)}
+                                      disabled={index >= maxReachedStep}
+                                      className={`h-1 rounded-full transition-all duration-500 ${
+                                        index < maxReachedStep
+                                          ? index === currentStep - 1
+                                            ? 'bg-[#0047AB] w-8 cursor-pointer hover:bg-[#003580] ring-1 ring-[#0047AB]/30'
+                                            : 'bg-[#0047AB]/60 w-6 cursor-pointer hover:bg-[#003580]'
+                                          : 'bg-[#E0E0E0] w-4 cursor-not-allowed'
+                                      }`}
+                                      title={`Step ${index + 1}${index === currentStep - 1 ? ' (현재)' : ''}`}
+                                    />
+                                  );
+                                })}
+                                {needsTruncation && endIdx < totalSteps && (
+                                  <span className="text-[10px] text-[#999999]">...</span>
+                                )}
+                              </>
+                            );
+                          })()}
 
-                          {/* Step N/N 텍스트 - 한 번만 표시 */}
+                          {/* Step N/N 텍스트 */}
                           <span className="text-[10px] text-[#666666] ml-2">
                             Step {currentStep} / {maxReachedStep}
                           </span>
@@ -3239,8 +3230,13 @@ export default function RealTimeConsultationPage() {
                       {/* ⭐ [v25] RAG Step 기반 카드 - 다음 단계 */}
                       {!activeScenario && ragSteps.length > 0 && currentStep > 0 && (() => {
                         const stepData = ragSteps[currentStep - 1];
-                        if (!stepData || stepData.nextCards.length === 0) return null;
-                        return stepData.nextCards.slice(0, 2).map((ragCard, index) => {
+                        // 현재 step의 nextCards 사용, 없으면 직전 step의 currentCards를 fallback
+                        let nextCardsToShow = stepData?.nextCards || [];
+                        if (nextCardsToShow.length === 0 && currentStep >= 2) {
+                          nextCardsToShow = ragSteps[currentStep - 2]?.currentCards || [];
+                        }
+                        if (nextCardsToShow.length === 0) return null;
+                        return nextCardsToShow.slice(0, 2).map((ragCard, index) => {
                           const card = convertRagToScenarioCard(ragCard, index);
                           return (
                             <motion.div
@@ -3737,11 +3733,11 @@ export default function RealTimeConsultationPage() {
                 </div>
               </div>
 
-              {/* 검색한 참조 문서 */}
+              {/* 검색한 참조 문서 (최대 8개 표시) */}
               {searchHistory.length > 0 && (() => {
-                // ⭐ 중복 제거: 동일한 문서 ID는 한 번만 표시 (키워드 구분 없이)
+                // ⭐ 중복 제거: 동일한 문서 ID는 한 번만 표시
                 const uniqueDocuments = new Map<string, string>();
-                
+
                 searchHistory.forEach((historyItem) => {
                   historyItem.results.forEach((card) => {
                     if (!uniqueDocuments.has(card.id)) {
@@ -3749,16 +3745,24 @@ export default function RealTimeConsultationPage() {
                     }
                   });
                 });
-                
+
+                const allDocs = Array.from(uniqueDocuments.entries());
+                const displayDocs = allDocs.slice(0, 8); // 최대 8개만 표시
+                const remainingCount = allDocs.length - displayDocs.length;
+
                 return (
                   <div>
-                    <h3 className="text-sm font-bold text-[#10B981] mb-3">🔍 검색한 참조 문서</h3>
+                    <h3 className="text-sm font-bold text-[#10B981] mb-3">
+                      🔍 검색한 참조 문서
+                      <span className="text-[10px] font-normal text-[#999999] ml-2">{allDocs.length}건</span>
+                    </h3>
                     <div className="grid grid-cols-2 gap-3">
-                      {Array.from(uniqueDocuments.entries()).map(([id, title]) => (
+                      {displayDocs.map(([id, title]) => (
                         <button
                           key={id}
                           onClick={() => {
                             setSelectedDocumentId(id);
+                            setSelectedDocumentTitle(title);
                             setIsDocumentModalOpen(true);
                           }}
                           className="flex items-center gap-2 text-left p-3 border border-[#E0E0E0] rounded-md hover:border-[#0047AB] hover:bg-[#F0F7FF] transition-colors"
@@ -3768,6 +3772,11 @@ export default function RealTimeConsultationPage() {
                         </button>
                       ))}
                     </div>
+                    {remainingCount > 0 && (
+                      <p className="text-[10px] text-[#999999] text-center mt-2">
+                        외 {remainingCount}건의 문서가 후처리 페이지에서 확인 가능합니다
+                      </p>
+                    )}
                   </div>
                 );
               })()}
@@ -3799,8 +3808,13 @@ export default function RealTimeConsultationPage() {
           onClose={() => {
             setIsDocumentModalOpen(false);
             setSelectedDocumentId(null);
+            setSelectedDocumentTitle(null);
           }}
           documentId={selectedDocumentId}
+          documentData={selectedDocumentTitle ? {
+            title: selectedDocumentTitle,
+            content: selectedDocumentTitle,
+          } : undefined}
         />
       )}
 

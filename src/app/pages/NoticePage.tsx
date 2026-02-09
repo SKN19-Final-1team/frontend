@@ -48,7 +48,7 @@ export default function NoticePage() {
 
   return (
     <MainLayout>
-      <div className="min-h-[calc(100vh-60px)] flex flex-col p-6 gap-4 bg-[#F5F5F5] pb-20">
+      <div className="min-h-[var(--content-height)] flex flex-col p-6 gap-4 bg-[#F5F5F5] pb-20">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border border-[#E0E0E0] p-4 flex-shrink-0">
           <h1 className="text-base font-bold text-[#333333]">📢 공지사항</h1>

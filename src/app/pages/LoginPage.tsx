@@ -61,7 +61,7 @@ export default function LoginPage() {
     
     if (foundEmployee && password === '0000') {
       // 최초 비밀번호는 0000으로 고정 (추후 변경 가능하도록 확장 가능)
-      const isAdminUser = foundEmployee.position === '팀장' || foundEmployee.position === '부장' || foundEmployee.position === '이사';
+      const isAdminUser = foundEmployee.position === '팀장' || foundEmployee.position === '부장' || foundEmployee.position === '이사' || foundEmployee.role === 'admin';
       
       localStorage.setItem('userRole', isAdminUser ? 'admin' : 'employee');
       localStorage.setItem('employeeId', foundEmployee.id);
@@ -81,7 +81,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0047AB] via-[#4A90E2] to-[#0047AB] relative px-4">
+    <div className="min-h-[var(--full-vh)] flex items-center justify-center bg-gradient-to-br from-[#0047AB] via-[#4A90E2] to-[#0047AB] relative px-4">
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
       
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[440px] p-6 sm:p-12">

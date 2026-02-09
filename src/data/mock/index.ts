@@ -21,14 +21,11 @@ export { simulationsData } from './simulations.mock';
 export { searchMockData } from './search.mock';
 
 // ⭐ 추가: mockData.ts에서 가져오는 데이터
-export { 
-  simulationScenariosData, 
-  recentAttemptsData, 
-  dashboardStatsData, 
-  weeklyGoalData, 
-  teamStatsData, 
-  badgesData, 
-  monthlyStatsData 
+export {
+  simulationScenariosData,
+  recentAttemptsData,
+  badgesData,
+  monthlyStatsData
 } from '../mockData';
 
 // ========== MVP 예외 항목 (나중에 DB 연동 가능) ==========
