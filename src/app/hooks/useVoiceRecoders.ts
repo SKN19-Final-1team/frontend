@@ -173,7 +173,7 @@ export const useVoiceRecorder = (options?: UseVoiceRecorderOptions) => {
       console.log('[WebSocket] 연결 시작...');
 
       // ⭐ [v25] 웹소켓 연결 (교육: ws/edu, 실전: ws/call)
-      const endpoint = optionsRef.current?.wsEndpoint || "wss://15.165.13.182/api/v1/ws/call";
+      const endpoint = optionsRef.current?.wsEndpoint || "wss://call-act.vercel.app/api/v1/ws/call";      
       console.log('[WebSocket] 엔드포인트:', endpoint);
       websocket.current = new WebSocket(endpoint);
 
