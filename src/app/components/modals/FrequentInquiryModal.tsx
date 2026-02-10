@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FileText, ExternalLink } from 'lucide-react';
 import DocumentDetailModal from './DocumentDetailModal';
+import { fetchFrequentInquiryById } from '@/api/frequentInquiriesApi';
 
 interface FrequentInquiryModalProps {
   isOpen: boolean;
@@ -11,26 +12,27 @@ interface FrequentInquiryModalProps {
     question: string;
     count: number;
     trend: 'up' | 'down' | 'same';
-  };
-  detailData: Array<{
-    id: number;
-    keyword: string;
-    question: string;
-    count: number;
-    trend: 'up' | 'down' | 'same';
-    content: string;
-    relatedDocument: {
-      title: string;
-      regulation: string;
-      summary: string;
+    content?: string;
+    relatedDocument?: {
       document_id: string;
+      title: string;
+      regulation?: string;
+      summary?: string;
     };
-  }>;
+  };
 }
 
-export default function FrequentInquiryModal({ isOpen, onClose, inquiry, detailData }: FrequentInquiryModalProps) {
-  // ⭐ 상세 데이터 찾기
-  const detail = detailData.find(d => d.id === inquiry.id);
+export default function FrequentInquiryModal({ isOpen, onClose, inquiry }: FrequentInquiryModalProps) {
+  // ⭐ 상세 데이터 (API에서 로드)
+  const [detail, setDetail] = useState<any>(null);
+
+  useEffect(() => {
+    if (isOpen && inquiry?.id) {
+      fetchFrequentInquiryById(inquiry.id).then(data => {
+        setDetail(data);
+      });
+    }
+  }, [isOpen, inquiry?.id]);
   
   // ⭐ 문서 상세 모달 상태
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);

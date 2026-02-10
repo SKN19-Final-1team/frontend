@@ -1,9 +1,10 @@
 import { Play, Clock, TrendingUp, Target, Shield, Users, Star, ChevronLeft, ChevronRight, Award, BookOpen, Lock, Trophy } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useState, useEffect } from 'react';
-import { consultationsData, simulationScenariosData, recentAttemptsData } from '@/data/mock';
+import { simulationScenariosData, recentAttemptsData } from '@/data/mock';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
+import { fetchConsultations } from '@/api/consultationApi';
 
 // ⭐ Mock 데이터에서 가져오기
 const scenarios = simulationScenariosData;
@@ -57,21 +58,15 @@ export default function SimulationPage() {
   };
 
   useEffect(() => {
-    const loadConsultations = () => {
-      const saved = localStorage.getItem('consultations');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (error) {
-          console.error('상담 데이터 로드 실패:', error);
-          return consultationsData;
-        }
+    const loadConsultations = async () => {
+      try {
+        const data = await fetchConsultations({ limit: 200 });
+        setConsultations(data as any);
+      } catch (error) {
+        console.error('상담 데이터 로드 실패:', error);
       }
-      return consultationsData;
     };
-
-    const data = loadConsultations();
-    setConsultations(data);
+    loadConsultations();
   }, []);
 
   return (

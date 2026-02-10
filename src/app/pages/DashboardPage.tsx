@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { noticesData, consultationsData, employeesData, simulationsData, frequentInquiriesDetailData } from '@/data/mock';
+import { noticesData, consultationsData, employeesData, simulationsData } from '@/data/mock';
 import { fetchFrequentInquiries, type FrequentInquiry } from '@/api/frequentInquiriesApi';
 import { enrichConsultationData } from '../../data/consultationsDataHelper';
 import ConsultationDetailModal from '../components/modals/ConsultationDetailModal';
@@ -587,7 +587,6 @@ export default function DashboardPage() {
           isOpen={isFrequentInquiryModalOpen}
           onClose={() => setIsFrequentInquiryModalOpen(false)}
           inquiry={selectedFrequentInquiry}
-          detailData={frequentInquiriesDetailData}
         />
       )}
     </MainLayout>
