@@ -147,6 +147,7 @@ export interface SaveConsultationRequest {
   customerId: string;
   customerName: string;     // 고객명은 참고용 (FK는 customerId)
   category: string;
+  categoryRaw?: string;     // LLM 세부 카테고리 (47개 중 택1)
   title: string;
   status: string;
   datetime: string;

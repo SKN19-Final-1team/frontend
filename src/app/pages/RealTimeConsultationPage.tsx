@@ -2366,6 +2366,7 @@ export default function RealTimeConsultationPage() {
 
   // ⭐ 레이어 네비게이션 (키보드/휠)
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useLayerNavigation({
     activeLayer,
@@ -2378,6 +2379,7 @@ export default function RealTimeConsultationPage() {
     setIsAtBoundary,
     isModalOpen: isDocumentModalOpen || isEndCallModalOpen,
     searchInputRef,
+    memoTextareaRef,
     cardAreaId: 'card-layer-area',
     setWheelDirection,
     onStepPrev: currentStep > 1 ? () => {
@@ -2388,6 +2390,8 @@ export default function RealTimeConsultationPage() {
       setPreviousStep(currentStep);
       setCurrentStep(currentStep + 1);
     } : undefined,
+    onMemoSave: handleSaveMemo,
+    onSearchExecute: handleSearch,
   });
   
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -3556,6 +3560,7 @@ export default function RealTimeConsultationPage() {
           <div id="memo-area" className="flex-1 flex flex-col min-h-0 mb-3">
             <h3 className="text-xs font-bold text-[#333333] mb-2 flex-shrink-0">상담 메모</h3>
             <textarea
+              ref={memoTextareaRef}
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
               className="flex-1 w-full bg-white border border-[#E0E0E0] rounded-md p-2.5 text-[10px] text-[#333333] resize-none focus:outline-none focus:border-[#0047AB] focus:ring-1 focus:ring-[#0047AB] overflow-y-auto"
