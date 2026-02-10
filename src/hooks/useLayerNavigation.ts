@@ -16,6 +16,9 @@ interface UseLayerNavigationOptions {
   searchInputRef?: RefObject<HTMLInputElement>;
   cardAreaId?: string; // 카드 영역 DOM ID
   setWheelDirection?: React.Dispatch<React.SetStateAction<'up' | 'down' | undefined>>; // 휠 방향 추적
+  // Step 네비게이션 (칸반 좌우 경계에서 Step 전환)
+  onStepPrev?: () => void;
+  onStepNext?: () => void;
 }
 
 /**
@@ -38,7 +41,9 @@ export function useLayerNavigation(options: UseLayerNavigationOptions) {
     isModalOpen = false,
     searchInputRef,
     cardAreaId = 'card-layer-area',
-    setWheelDirection
+    setWheelDirection,
+    onStepPrev,
+    onStepNext
   } = options;
   
   // 경계 lock 상태 (첫 휠은 경고, 두 번째부터 전환)
@@ -90,8 +95,11 @@ export function useLayerNavigation(options: UseLayerNavigationOptions) {
           if (col > 0) {
             // 2x2 내부 이동
             setFocusedCard({ row, col: col - 1 });
+          } else if (activeLayer === 'kanban' && onStepPrev) {
+            // 칸반 좌측 경계 → 이전 Step
+            onStepPrev();
+            setFocusedCard({ row, col: maxCol }); // 오른쪽 끝으로
           }
-          // TODO: 칸반 레이어에서 Step 전환 (향후 구현)
           break;
 
         case 'ArrowRight':
@@ -99,8 +107,11 @@ export function useLayerNavigation(options: UseLayerNavigationOptions) {
           if (col < maxCol) {
             // 2x2 내부 이동
             setFocusedCard({ row, col: col + 1 });
+          } else if (activeLayer === 'kanban' && onStepNext) {
+            // 칸반 우측 경계 → 다음 Step
+            onStepNext();
+            setFocusedCard({ row, col: 0 }); // 왼쪽 끝으로
           }
-          // TODO: 칸반 레이어에서 Step 전환 (향후 구현)
           break;
 
         case '/':

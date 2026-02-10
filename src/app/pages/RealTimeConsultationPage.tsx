@@ -2379,7 +2379,15 @@ export default function RealTimeConsultationPage() {
     isModalOpen: isDocumentModalOpen || isEndCallModalOpen,
     searchInputRef,
     cardAreaId: 'card-layer-area',
-    setWheelDirection
+    setWheelDirection,
+    onStepPrev: currentStep > 1 ? () => {
+      setPreviousStep(currentStep);
+      setCurrentStep(currentStep - 1);
+    } : undefined,
+    onStepNext: currentStep < maxReachedStep ? () => {
+      setPreviousStep(currentStep);
+      setCurrentStep(currentStep + 1);
+    } : undefined,
   });
   
   const handleKeyPress = (e: React.KeyboardEvent) => {
