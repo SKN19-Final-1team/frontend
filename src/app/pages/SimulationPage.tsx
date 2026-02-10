@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { simulationScenariosData, recentAttemptsData } from '@/data/mock';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
-import { fetchConsultations } from '@/api/consultationApi';
+import { fetchConsultations, type ConsultationItem } from '@/api/consultationApi';
 
 // ⭐ Mock 데이터에서 가져오기
 const scenarios = simulationScenariosData;
@@ -12,7 +12,7 @@ const recentAttempts = recentAttemptsData;
 
 export default function SimulationPage() {
   const navigate = useNavigate();
-  const [consultations, setConsultations] = useState([]);
+  const [consultations, setConsultations] = useState<ConsultationItem[]>([]);
   const [scenarioPage, setScenarioPage] = useState(1);
   const [bestPracticePage, setBestPracticePage] = useState(1);
   
@@ -61,7 +61,7 @@ export default function SimulationPage() {
     const loadConsultations = async () => {
       try {
         const data = await fetchConsultations({ limit: 200 });
-        setConsultations(data as any);
+        setConsultations(data);
       } catch (error) {
         console.error('상담 데이터 로드 실패:', error);
       }

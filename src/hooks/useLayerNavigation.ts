@@ -271,6 +271,9 @@ export function useLayerNavigation(options: UseLayerNavigationOptions) {
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
       window.removeEventListener('wheel', handleWheel);
+      if (boundaryTimeoutRef.current) {
+        clearTimeout(boundaryTimeoutRef.current);
+      }
       if (wheelDirectionTimeoutRef.current) {
         clearTimeout(wheelDirectionTimeoutRef.current);
       }
@@ -285,6 +288,5 @@ export function useLayerNavigation(options: UseLayerNavigationOptions) {
     isAtBoundary,
     setIsAtBoundary,
     setWheelDirection,
-    boundaryTimeoutRef
   ]);
 }
