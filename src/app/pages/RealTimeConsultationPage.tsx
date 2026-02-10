@@ -483,31 +483,36 @@ export default function RealTimeConsultationPage() {
       setRagGuidanceScript(data.guidanceScript);
     }
 
-    // ⭐ 키워드 추출 (routing.matched에서) - displayedKeywords도 함께 업데이트
+    // ⭐ 키워드 추출 (routing.matched에서) - Lazy Correction: Backend 키워드로 교체
     if (data.routing) {
       const routing = data.routing as Record<string, unknown>;
       const matched = (routing.matched || {}) as Record<string, unknown>;
-      const keywords: string[] = [];
+      const rawKeywords: string[] = [];
       // Backend sends: matched.card_names[], matched.actions[], matched.payments[], matched.weak_intents[]
-      if (Array.isArray(matched.card_names)) keywords.push(...matched.card_names.map(String));
-      if (Array.isArray(matched.actions)) keywords.push(...matched.actions.map(String));
-      if (Array.isArray(matched.payments)) keywords.push(...matched.payments.map(String));
+      if (Array.isArray(matched.card_names)) rawKeywords.push(...matched.card_names.map(String));
+      if (Array.isArray(matched.actions)) rawKeywords.push(...matched.actions.map(String));
+      if (Array.isArray(matched.payments)) rawKeywords.push(...matched.payments.map(String));
       // Legacy fallback: 이전 형식 호환
-      if (!keywords.length && routing.card_name) keywords.push(String(routing.card_name));
-      if (!keywords.length && routing.intent) keywords.push(String(routing.intent));
-      if (keywords.length > 0) {
-        // incomingKeywords 업데이트
+      if (!rawKeywords.length && routing.card_name) rawKeywords.push(String(routing.card_name));
+      if (!rawKeywords.length && routing.intent) rawKeywords.push(String(routing.intent));
+      if (rawKeywords.length > 0) {
+        // Backend raw 키워드를 Frontend canonical 형태로 변환 (더 서술적인 표시)
+        // 예: Backend "분실" → Frontend canonical "카드분실"
+        const canonicalKeywords = rawKeywords.map(kw => {
+          const canonical = matchKeyword(kw, 1); // priority 무관하게 매칭 시도
+          return canonical || kw; // canonical 없으면 Backend 원본 사용
+        });
+        const uniqueKeywords = [...new Set(canonicalKeywords)].slice(0, 3);
+
+        // incomingKeywords 업데이트 (누적)
         setIncomingKeywords(prev => {
-          const combined = [...new Set([...prev, ...keywords])];
-          return combined.slice(0, 3); // 최대 3개
+          const combined = [...new Set([...prev, ...uniqueKeywords])];
+          return combined.slice(0, 3);
         });
-        // ⭐ displayedKeywords도 업데이트 (화면에 실제 표시되는 키워드)
-        setDisplayedKeywords(prev => {
-          const combined = [...new Set([...prev, ...keywords])];
-          return combined.slice(0, 3); // 최대 3개
-        });
+        // ⭐ Lazy Correction: Backend 키워드로 교체 (기존 Frontend 키워드 대체)
+        setDisplayedKeywords(uniqueKeywords);
         setIsExtractingKeywords(false); // 키워드 추출 완료
-        console.log('🔑 [RAG] 키워드 추출:', keywords);
+        console.log('🔑 [RAG] 키워드 Lazy Correction:', rawKeywords, '→', uniqueKeywords);
       }
     }
   }, []);
