@@ -374,11 +374,13 @@ export default function RealTimeConsultationPage() {
   // ⭐ [v23] RAG 실시간 결과 (웹소켓 응답)
   const [ragGuidanceScript, setRagGuidanceScript] = useState<string>('');
   // ⭐ [v25] RAG Step 기반 카드 히스토리 (각 RAG 응답 = 1 Step)
-  const [ragSteps, setRagSteps] = useState<Array<{ currentCards: RAGCard[]; nextCards: RAGCard[] }>>([]);
+  const [ragSteps, setRagSteps] = useState<Array<{ currentCards: RAGCard[]; nextCards: RAGCard[]; searchTimeMs?: number }>>([]);
 
   // ⭐ [v25] RAGCard → ScenarioCard 변환 (중앙 유틸리티 사용)
-  const convertRagToScenarioCard = useCallback((ragCard: RAGCard, index: number): ScenarioCard => {
-    return normalizeRAGCard(ragCard, index);
+  const convertRagToScenarioCard = useCallback((ragCard: RAGCard, index: number, searchTimeMs?: number): ScenarioCard => {
+    const card = normalizeRAGCard(ragCard, index);
+    if (searchTimeMs) card.searchTimeMs = searchTimeMs;
+    return card;
   }, []);
 
   // ⭐ [v24] STT 결과 수신 핸들러 (startTimestamp는 아래에서 정의되므로 ref 사용)
@@ -465,6 +467,7 @@ export default function RealTimeConsultationPage() {
       setRagSteps(prev => [...prev, {
         currentCards,
         nextCards,
+        searchTimeMs: data.meta?.search_time_ms,
       }]);
 
       // Step 진행 (대기콜 시나리오와 동일한 UX)
@@ -3171,7 +3174,7 @@ export default function RealTimeConsultationPage() {
                         const stepData = ragSteps[currentStep - 1];
                         if (!stepData || stepData.currentCards.length === 0) return null;
                         return stepData.currentCards.slice(0, 2).map((ragCard, index) => {
-                          const card = convertRagToScenarioCard(ragCard, index);
+                          const card = convertRagToScenarioCard(ragCard, index, stepData.searchTimeMs);
                           return (
                             <motion.div
                               key={`rag-current-${card.id}-step${currentStep}`}
@@ -3256,7 +3259,7 @@ export default function RealTimeConsultationPage() {
                         }
                         if (nextCardsToShow.length === 0) return null;
                         return nextCardsToShow.slice(0, 2).map((ragCard, index) => {
-                          const card = convertRagToScenarioCard(ragCard, index);
+                          const card = convertRagToScenarioCard(ragCard, index, stepData?.searchTimeMs);
                           return (
                             <motion.div
                               key={`rag-next-${card.id}-step${currentStep}`}

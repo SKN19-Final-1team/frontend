@@ -223,9 +223,29 @@ export const InfoCard = ({ card, stepNumber, searchNumber, source, onDetailClick
         </div>
       )}
 
-      {/* 하단: 처리 시간 + 자세히 보기 */}
+      {/* 하단: 유사도 + 처리 시간 + 자세히 보기 */}
       <div className="mt-auto pt-2 border-t border-[#E0E0E0] flex items-center justify-between">
-        <span className="text-[10px] text-[#999999]">⏱ {card.time}</span>
+        <div className="flex items-center gap-2">
+          {/* 유사도 표시 (Backend에서 전달 시) */}
+          {card.relevanceScore != null && card.relevanceScore > 0 && (
+            <span className="flex items-center gap-0.5">
+              <span className="text-[10px] text-[#999999]">유사도</span>
+              <span className={`text-[10px] font-semibold ${
+                card.relevanceScore >= 80 ? 'text-[#34A853]' :
+                card.relevanceScore >= 50 ? 'text-[#FBBC04]' :
+                'text-[#EA4335]'
+              }`}>{card.relevanceScore}%</span>
+            </span>
+          )}
+          {/* 검색 소요시간 표시 (Backend에서 전달 시) */}
+          {card.searchTimeMs != null && card.searchTimeMs > 0 && (
+            <span className="text-[10px] text-[#999999]">
+              검색 {card.searchTimeMs < 1000 ? `${Math.round(card.searchTimeMs)}ms` : `${(card.searchTimeMs / 1000).toFixed(1)}s`}
+            </span>
+          )}
+          {/* 기존 처리 시간 */}
+          {card.time && <span className="text-[10px] text-[#999999]">{card.time}</span>}
+        </div>
         <button
           onClick={onDetailClick}
           className={`text-[10px] font-semibold flex items-center gap-1 px-2 py-1 rounded transition-colors ${

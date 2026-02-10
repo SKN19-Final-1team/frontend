@@ -27,6 +27,7 @@ export interface RAGResponse {
     model: string;
     doc_count: number;
     context_chars: number;
+    search_time_ms?: number;
   };
   docs?: Array<Record<string, unknown>>;
 }
