@@ -205,8 +205,8 @@ export default function ConsultationHistoryPage() {
           consultation_id: 'BULK_EXPORT', // 일괄 다운로드
           consultation_category: '일괄 다운로드',
           customer_name: `${filteredConsultations.length}건`,
-          downloaded_by: 'EMP001', // TODO: 실제 로그인 사용자
-          downloaded_by_name: '홍길동',
+          downloaded_by: localStorage.getItem('employeeId') || 'EMP-001',
+          downloaded_by_name: localStorage.getItem('employeeName') || '상담사',
           download_type: 'xlsx',
           file_name: fileName,
           file_size: 0, // Excel 파일 크기는 브라우저에서 알 수 없음
